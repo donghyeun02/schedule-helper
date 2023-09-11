@@ -1,7 +1,7 @@
 {
   "name": "calerdarbot",
   "version": "1.0.0",
-  "description": "",
+  "description": "Receiving schedules notification in Google Calendar (Slackbot)",
   "main": "app.js",
   "scripts": {
     "start": "nodemon app.js"
@@ -14,7 +14,10 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@slack/events-api": "^3.0.1",
+    "@slack/web-api": "^6.9.0",
     "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
     "express": "^4.18.2",
     "morgan": "^1.10.0"
   },

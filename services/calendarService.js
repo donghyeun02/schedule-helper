@@ -42,4 +42,6 @@ const getToken = async (req, res) => {
   res.json(accessToken);
 };
 
+const test = test;
+
 module.exports = { homePage, googleLogin, getToken };

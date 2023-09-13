@@ -4,7 +4,7 @@ const express = require('express');
 const logger = require('morgan');
 const cors = require('cors');
 const port = process.env.PORT;
-const router = require('./routes/slackRouter');
+const router = require('./routes');
 
 const app = express();
 

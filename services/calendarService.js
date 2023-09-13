@@ -2,7 +2,7 @@ const axios = require('axios');
 
 const clientId = process.env.GOOGLE_CLIENT_ID;
 const googleSecret = process.env.GOOGLE_SECRET;
-// const calendarId = process.env.CALENDAR_ID;
+const calendarId = process.env.CALENDAR_ID;
 
 const oauthRedirectUri = process.env.OAUTH_REDIRECT_URI;
 // const tokenRedirectUri = 'process.env.TOKEN_REDIRECT_URI';
@@ -41,5 +41,7 @@ const getToken = async (req, res) => {
 
   res.json(accessToken);
 };
+
+const test = test;
 
 module.exports = { homePage, googleLogin, getToken };

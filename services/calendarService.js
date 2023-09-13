@@ -1,11 +1,12 @@
 const axios = require('axios');
+const { v4 } = require('uuid');
 
 const clientId = process.env.GOOGLE_CLIENT_ID;
 const googleSecret = process.env.GOOGLE_SECRET;
 const calendarId = process.env.CALENDAR_ID;
 
 const oauthRedirectUri = process.env.OAUTH_REDIRECT_URI;
-// const tokenRedirectUri = 'process.env.TOKEN_REDIRECT_URI';
+const webhookRedirectUri = process.env.WEBHOOK_REDIRECT_URI;
 
 const homePage = async (req, res) => {
   res.status(200).send(`
@@ -37,11 +38,23 @@ const getToken = async (req, res) => {
     }
   );
 
-  const accessToken = `Bearer ${getAccessToken.data.access_token}`;
+  const accessToken = getAccessToken.data.access_token;
 
-  res.json(accessToken);
+  await axios({
+    url: `https://www.googleapis.com/calendar/v3/calendars/${calendarId}/events/watch`,
+    method: 'post',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      Accept: `application/json`,
+    },
+    data: {
+      id: v4(),
+      type: 'web_hook',
+      address: webhookRedirectUri,
+    },
+  });
+
+  res.json('OK');
 };
-
-const test = test;
 
 module.exports = { homePage, googleLogin, getToken };

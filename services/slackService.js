@@ -8,4 +8,8 @@ const eventSubscriptions = slackEvents.requestListener();
 
 slackEvents.on('error', console.error);
 
-module.exports = { eventSubscriptions };
+const sendMessage = async (req, res) => {
+  res.json('OK');
+};
+
+module.exports = { eventSubscriptions, sendMessage };

@@ -8,19 +8,11 @@ const calendarId = process.env.CALENDAR_ID;
 const oauthRedirectUri = process.env.OAUTH_REDIRECT_URI;
 const webhookRedirectUri = process.env.WEBHOOK_REDIRECT_URI;
 
-const homePage = async (req, res) => {
-  res.status(200).send(`
-  <h1>Calendar Bot Home page</h1>
-  <a href="/login">login</a>
-`);
-};
-
 const googleLogin = async (req, res) => {
-  let url = 'https://accounts.google.com/o/oauth2/v2/auth';
-  url += `?client_id=${clientId}`;
-  url += `&redirect_uri=${oauthRedirectUri}`;
-  url += '&scope=https://www.googleapis.com/auth/calendar.readonly';
-  url += '&response_type=code';
+  const scope = 'https://www.googleapis.com/auth/calendar.readonly';
+  const responseType = 'code';
+
+  const url = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${oauthRedirectUri}&scope=${scope}&response_type=${responseType}`;
   res.redirect(url);
 };
 
@@ -57,4 +49,4 @@ const getToken = async (req, res) => {
   res.json('OK');
 };
 
-module.exports = { homePage, googleLogin, getToken };
+module.exports = { googleLogin, getToken };

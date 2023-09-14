@@ -3,6 +3,7 @@ const slackService = require('../services/slackService');
 
 const router = express.Router();
 
-router.use('/slack/events', slackService.eventSubscriptions);
+router.use('/events', slackService.eventSubscriptions);
+router.post('/message', slackService.sendMessage);
 
 module.exports = router;

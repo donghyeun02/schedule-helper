@@ -1,25 +1,18 @@
 const axios = require('axios');
+const { v4 } = require('uuid');
 
 const clientId = process.env.GOOGLE_CLIENT_ID;
 const googleSecret = process.env.GOOGLE_SECRET;
 const calendarId = process.env.CALENDAR_ID;
 
 const oauthRedirectUri = process.env.OAUTH_REDIRECT_URI;
-// const tokenRedirectUri = 'process.env.TOKEN_REDIRECT_URI';
-
-const homePage = async (req, res) => {
-  res.status(200).send(`
-  <h1>Calendar Bot Home page</h1>
-  <a href="/login">login</a>
-`);
-};
+const webhookRedirectUri = process.env.WEBHOOK_REDIRECT_URI;
 
 const googleLogin = async (req, res) => {
-  let url = 'https://accounts.google.com/o/oauth2/v2/auth';
-  url += `?client_id=${clientId}`;
-  url += `&redirect_uri=${oauthRedirectUri}`;
-  url += '&scope=https://www.googleapis.com/auth/calendar.readonly';
-  url += '&response_type=code';
+  const scope = 'https://www.googleapis.com/auth/calendar.readonly';
+  const responseType = 'code';
+
+  const url = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${oauthRedirectUri}&scope=${scope}&response_type=${responseType}`;
   res.redirect(url);
 };
 
@@ -37,11 +30,23 @@ const getToken = async (req, res) => {
     }
   );
 
-  const accessToken = `Bearer ${getAccessToken.data.access_token}`;
+  const accessToken = getAccessToken.data.access_token;
 
-  res.json(accessToken);
+  await axios({
+    url: `https://www.googleapis.com/calendar/v3/calendars/${calendarId}/events/watch`,
+    method: 'post',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      Accept: `application/json`,
+    },
+    data: {
+      id: v4(),
+      type: 'web_hook',
+      address: webhookRedirectUri,
+    },
+  });
+
+  res.json('OK');
 };
 
-const test = test;
-
-module.exports = { homePage, googleLogin, getToken };
+module.exports = { googleLogin, getToken };

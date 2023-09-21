@@ -5,7 +5,6 @@ const calendarId = process.env.CALENDAR_ID;
 
 const { oauth2Client } = require('../utils/oauth2');
 const { sendSlackMessage } = require('./slackService');
-const { text } = require('express');
 
 const calendar = google.calendar('v3');
 
@@ -90,10 +89,6 @@ const calendarEventHandler = async (req, res) => {
       const createdTime = await getParseTime(event.created);
       const updatedTime = await getParseTime(event.updated);
 
-      // const eventContent = event.summary;
-      // const eventStartTime = event.start.dateTime;
-      // const eventEndTime = event.end.dateTime;
-
       switch (eventStatus) {
         case 'confirmed':
           if (createdTime === updatedTime) {
@@ -164,6 +159,7 @@ const getAuthCode = () => {
   return savedAccessToken;
 };
 
+// 받아온 시간(RFC3339) -> Date로 바꾸기
 const getParseTime = (time) => {
   const sliceTime = time.slice(0, -5);
 

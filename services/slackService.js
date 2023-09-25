@@ -9,12 +9,43 @@ const eventSubscriptions = slackEvents.requestListener();
 
 slackEvents.on('error : ', console.error);
 
-const sendSlackMessage = async (message, eventOpt) => {
+const sendSlackMessage = async (eventOpt) => {
   try {
     const option = {
       channel: slackChannel,
-      text: message,
-      attachment: [eventOpt],
+      blocks: [
+        {
+          type: 'header',
+          text: {
+            type: 'plain_text',
+            text: eventOpt.title,
+            emoji: true,
+          },
+        },
+      ],
+      attachments: [
+        {
+          color: eventOpt.color,
+          fallback: 'Slack attachment-level `fallback`',
+          blocks: [
+            {
+              type: 'header',
+              text: {
+                type: 'plain_text',
+                text: eventOpt.summary,
+                emoji: true,
+              },
+            },
+            {
+              type: 'section',
+              text: {
+                type: 'mrkdwn',
+                text: eventOpt.text,
+              },
+            },
+          ],
+        },
+      ],
     };
 
     await web.chat.postMessage(option);

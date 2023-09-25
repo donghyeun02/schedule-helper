@@ -9,7 +9,6 @@ const { sendSlackMessage } = require('./slackService');
 const calendar = google.calendar('v3');
 
 let savedAccessToken = null;
-const webhookId = v4();
 
 //auth code를 얻기 위한 구글 로그인 과정
 const googleLogin = async (req, res) => {
@@ -32,7 +31,9 @@ const setUpCalendarWebhook = async (req, res) => {
     const accessToken = getAccessToken.tokens.access_token;
 
     saveAccessToken(accessToken);
+
     await calendarWebhook(accessToken);
+
     res.status(200).json({ message: 'WEB_HOOK' });
   } catch (error) {
     res.status(500).json({ message: error.stack });
@@ -42,13 +43,15 @@ const setUpCalendarWebhook = async (req, res) => {
 // 웹훅
 const calendarWebhook = async (accessToken) => {
   try {
+    const webhookId = v4();
+
     const webhook = await calendar.events.watch({
       resource: {
         id: webhookId,
         type: 'web_hook',
         address: 'https://donghyeun02.link/calendar-webhook',
         params: {
-          ttl: 600,
+          ttl: 300,
         },
       },
       calendarId: calendarId,
@@ -59,10 +62,11 @@ const calendarWebhook = async (accessToken) => {
     });
 
     const { data } = webhook;
+
     console.log('Google Calendar Webhook이 설정되었습니다. : ', data);
   } catch (error) {
     console.error('Google Calendar Webhook 설정 에러 :', error);
-    res.status(500).send('webhook err');
+    throw error;
   }
 };
 
@@ -73,50 +77,68 @@ const calendarEventHandler = async (req, res) => {
 
     const eventData = req.headers;
 
+    const resourceId = eventData['x-goog-resource-id'];
     const resourceState = eventData['x-goog-resource-state'];
 
     // 여기쯤에 웹훅이 두 개일 시 방금 생성된 걸 삭제하는 로직 추가
 
     if (resourceState === 'sync') {
-      const slackMessage = `웹훅이 등록되었습니다.`;
+      const eventOpt = {
+        color: 'FFFF00',
+        title: '웹훅 등록 알림',
+        summary: '웹훅 등록',
+        text: `웹훅이 등록되었습니다. / 웹훅 아이디 : ${resourceId}`,
+      };
 
-      await sendSlackMessage(slackMessage);
+      await sendSlackMessage(eventOpt);
     } else if (resourceState === 'exists') {
       const event = await getCalendarEvent(accessToken);
 
       const eventStatus = event.status;
+      const eventSummary = event.summary;
 
       const createdTime = await getParseTime(event.created);
       const updatedTime = await getParseTime(event.updated);
+      const startDateTime = await formatDateTime(
+        event.start.dateTime,
+        event.start.timeZone
+      );
+      const endDateTime = await formatDateTime(
+        event.end.dateTime,
+        event.end.timeZone
+      );
 
       switch (eventStatus) {
         case 'confirmed':
           if (createdTime === updatedTime) {
-            const slackMessage = '일정이 등록되었습니다.';
             const eventOpt = {
-              color: 'green',
-              text: '등록된 이벤트 내용',
+              color: '00FF00',
+              title: '일정 등록 알림',
+              summary: eventSummary,
+              text: `일정 시작 : ${startDateTime} \n일정 종료 : ${endDateTime}`,
             };
 
-            await sendSlackMessage(slackMessage, eventOpt);
+            await sendSlackMessage(eventOpt);
           } else {
-            const slackMessage = '일정이 변경되었습니다.';
             const eventOpt = {
-              color: 'blue',
-              text: '변경된 이벤트 내용',
+              color: '0000FF',
+              title: '일정 변경 알림',
+              summary: eventSummary,
+              text: `일정 시작 : ${startDateTime} \n일정 종료 : ${endDateTime}`,
             };
 
-            await sendSlackMessage(slackMessage, eventOpt);
+            await sendSlackMessage(eventOpt);
           }
           break;
         case 'cancelled':
-          const slackMessage = '일정이 삭제되었습니다.';
           const eventOpt = {
-            color: 'red',
-            text: '삭제된 이벤트 내용',
+            color: 'FF0000',
+            title: '일정 삭제 알림',
+            summary: eventSummary,
+            text: `일정 시작 : ${startDateTime} \n일정 종료 : ${endDateTime}`,
           };
 
-          await sendSlackMessage(slackMessage, eventOpt);
+          await sendSlackMessage(eventOpt);
           break;
       }
     }
@@ -164,6 +186,23 @@ const getParseTime = (time) => {
   const sliceTime = time.slice(0, -5);
 
   return Date.parse(sliceTime);
+};
+
+const formatDateTime = (dateTime, tz) => {
+  const opts = {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    weekday: 'long',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+    timeZone: tz,
+  };
+
+  const format = new Intl.DateTimeFormat('ko-KR', opts);
+
+  return format.format(new Date(dateTime));
 };
 
 module.exports = {

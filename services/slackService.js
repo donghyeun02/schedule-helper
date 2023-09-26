@@ -1,5 +1,6 @@
 const { createEventAdapter } = require('@slack/events-api');
 const { WebClient } = require('@slack/web-api');
+const { googleLogin, channelRegistration } = require('../utils/slackHome');
 
 const slackEvents = createEventAdapter(process.env.SLACK_SECRET);
 const web = new WebClient(process.env.SLACK_BOT_TOKEN);
@@ -54,4 +55,34 @@ const sendSlackMessage = async (eventOpt) => {
   }
 };
 
-module.exports = { eventSubscriptions, sendSlackMessage };
+const handleButton = async (req, res) => {
+  const payload = JSON.parse(req.body.payload);
+
+  const actionType = payload.type;
+
+  if (actionType === 'block_actions') {
+    const actionId = payload.actions[0].action_id;
+
+    if (actionId === 'sqHGX') {
+      googleLogin({
+        ack: () => {},
+        body: payload,
+        client: web,
+      });
+    } else if (actionId === '5U0Ou') {
+      channelRegistration({
+        ack: () => {},
+        body: payload,
+        client: web,
+      });
+    }
+  }
+
+  res.sendStatus(200);
+};
+
+module.exports = {
+  eventSubscriptions,
+  sendSlackMessage,
+  handleButton,
+};

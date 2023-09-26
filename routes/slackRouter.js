@@ -4,5 +4,6 @@ const slackService = require('../services/slackService');
 const router = express.Router();
 
 router.use('/events', slackService.eventSubscriptions);
+router.use('/button', slackService.handleButton);
 
 module.exports = router;

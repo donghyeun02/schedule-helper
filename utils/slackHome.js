@@ -5,54 +5,6 @@ const slackApp = new App({
   token: process.env.SLACK_BOT_TOKEN,
 });
 
-// slackApp.event('app_home_opened', async ({ event, client }) => {
-//   try {
-//     const blocks = [
-//       {
-//         type: 'header',
-//         text: {
-//           type: 'plain_text',
-//           text: '구글 캘린더 알리미',
-//         },
-//       },
-//       {
-//         type: 'actions',
-//         elements: [
-//           {
-//             type: 'button',
-//             text: {
-//               type: 'plain_text',
-//               text: 'Google Login',
-//               emoji: true,
-//             },
-//             style: 'primary',
-//             action_id: 'google_login',
-//           },
-//           {
-//             type: 'button',
-//             text: {
-//               type: 'plain_text',
-//               text: '알림받을 채널 등록',
-//               emoji: true,
-//             },
-//             action_id: 'channel_registration',
-//           },
-//         ],
-//       },
-//     ];
-
-//     await client.views.update({
-//       user_id: event.user,
-//       view: {
-//         type: 'home',
-//         blocks: blocks,
-//       },
-//     });
-//   } catch (error) {
-//     console.error(error);
-//   }
-// });
-
 const googleLogin = async ({ ack, body, client }) => {
   ack();
 

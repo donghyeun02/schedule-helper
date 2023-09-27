@@ -1,14 +1,12 @@
-const { createEventAdapter } = require('@slack/events-api');
 const { WebClient } = require('@slack/web-api');
-const { googleLogin, channelRegistration } = require('../utils/slackHome');
+const {
+  googleLogin,
+  channelRegistration,
+  registerSelectedChannel,
+} = require('../utils/slackHome');
 
-const slackEvents = createEventAdapter(process.env.SLACK_SECRET);
 const web = new WebClient(process.env.SLACK_BOT_TOKEN);
 const slackChannel = process.env.CONVERSATION_ID;
-
-const eventSubscriptions = slackEvents.requestListener();
-
-slackEvents.on('error : ', console.error);
 
 const sendSlackMessage = async (eventOpt) => {
   try {
@@ -58,31 +56,40 @@ const sendSlackMessage = async (eventOpt) => {
 const handleButton = async (req, res) => {
   const payload = JSON.parse(req.body.payload);
 
+  console.log('패이로드 : ', payload);
   const actionType = payload.type;
 
-  if (actionType === 'block_actions') {
-    const actionId = payload.actions[0].action_id;
+  switch (actionType) {
+    case 'block_actions':
+      const actionId = payload.actions[0].action_id;
 
-    if (actionId === 'sqHGX') {
-      googleLogin({
-        ack: () => {},
-        body: payload,
-        client: web,
-      });
-    } else if (actionId === '5U0Ou') {
-      channelRegistration({
-        ack: () => {},
-        body: payload,
-        client: web,
-      });
-    }
+      if (actionId === 'sqHGX') {
+        googleLogin({
+          ack: () => {},
+          body: payload,
+          client: web,
+        });
+      } else if (actionId === '5U0Ou') {
+        channelRegistration({
+          ack: () => {},
+          body: payload,
+          client: web,
+        });
+      }
+      break;
+    case 'view_submission':
+      const callbackId = payload.view.callback_id;
+
+      if (callbackId === 'channel_selection') {
+        registerSelectedChannel({ ack: () => {}, body: payload, client: web });
+      }
+      break;
   }
 
   res.sendStatus(200);
 };
 
 module.exports = {
-  eventSubscriptions,
   sendSlackMessage,
   handleButton,
 };

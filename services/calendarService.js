@@ -1,47 +1,77 @@
 const { v4 } = require('uuid');
 const { google } = require('googleapis');
 
-const calendarId = process.env.CALENDAR_ID;
-
 const { oauth2Client } = require('../utils/oauth2');
 const { sendSlackMessage } = require('./slackService');
+const {
+  createUser,
+  emailExist,
+  getCalendarId,
+  createWebHook,
+  webHookExistByEmail,
+} = require('../models/calendarDao');
+const { getSlackChannel } = require('../models/slackDao');
 
 const calendar = google.calendar('v3');
 
 let savedAccessToken = null;
 
-//auth code를 얻기 위한 구글 로그인 과정
+// auth code를 얻기 위한 구글 로그인 과정
 const googleLogin = async (req, res) => {
   const oauth2Url = oauth2Client.generateAuthUrl({
     access_type: 'offline',
-    scope: 'https://www.googleapis.com/auth/calendar.events.readonly',
+    scope: [
+      'https://www.googleapis.com/auth/calendar.events.readonly',
+      'https://www.googleapis.com/auth/userinfo.email',
+    ],
     response_type: 'code',
   });
 
   res.redirect(oauth2Url);
 };
 
-// 웹훅 설정하는 로직
+// 구글 로그인 후 로직
 const setUpCalendarWebhook = async (req, res) => {
   try {
     const authCode = req.query.code;
 
     const getAccessToken = await oauth2Client.getToken(authCode);
-
     const accessToken = getAccessToken.tokens.access_token;
 
-    saveAccessToken(accessToken);
+    oauth2Client.setCredentials({ access_token: accessToken });
 
-    await calendarWebhook(accessToken);
+    const oauth2 = google.oauth2('v2');
+    const userInfo = await oauth2.userinfo.get({ auth: oauth2Client });
 
-    res.status(200).json({ message: 'WEB_HOOK' });
+    const userEmail = userInfo.data.email;
+
+    const existEmail = await emailExist(userEmail);
+    const calendarId = await getCalendarId(userEmail);
+
+    if (existEmail.count === '0') {
+      await createUser(userEmail);
+    }
+
+    const webhookExist = await webHookExistByEmail(userEmail);
+
+    if (webhookExist.webhook_exists === '0') {
+      await saveAccessToken(accessToken);
+
+      await calendarWebhook(accessToken, calendarId.calendar);
+
+      return res.status(200).json({ message: '웹훅이 등록되었습니다.' });
+    } else {
+      return res
+        .status(200)
+        .json({ message: '이미 웹훅이 등록되어 있습니다.' });
+    }
   } catch (error) {
     res.status(500).json({ message: error.stack });
   }
 };
 
 // 웹훅
-const calendarWebhook = async (accessToken) => {
+const calendarWebhook = async (accessToken, calendarId) => {
   try {
     const webhookId = v4();
 
@@ -75,24 +105,34 @@ const calendarEventHandler = async (req, res) => {
   try {
     const accessToken = getAuthCode();
 
+    oauth2Client.setCredentials({ access_token: accessToken });
+
+    const oauth2 = google.oauth2('v2');
+    const userInfo = await oauth2.userinfo.get({ auth: oauth2Client });
+
+    const userEmail = userInfo.data.email;
+
+    const channelId = await getSlackChannel(userEmail);
+    const calendarId = await getCalendarId(userEmail);
+
     const eventData = req.headers;
 
     const resourceId = eventData['x-goog-resource-id'];
     const resourceState = eventData['x-goog-resource-state'];
 
-    // 여기쯤에 웹훅이 두 개일 시 방금 생성된 걸 삭제하는 로직 추가
-
     if (resourceState === 'sync') {
       const eventOpt = {
+        slackChannel: channelId.slackChannel,
         color: 'FFFF00',
         title: '웹훅 등록 알림',
         summary: '웹훅 등록',
         text: `웹훅이 등록되었습니다. / 웹훅 아이디 : ${resourceId}`,
       };
 
+      await createWebHook(resourceId, userEmail);
       await sendSlackMessage(eventOpt);
     } else if (resourceState === 'exists') {
-      const event = await getCalendarEvent(accessToken);
+      const event = await getCalendarEvent(accessToken, calendarId.calendar);
 
       const eventStatus = event.status;
       const eventSummary = event.summary;
@@ -112,6 +152,7 @@ const calendarEventHandler = async (req, res) => {
         case 'confirmed':
           if (createdTime === updatedTime) {
             const eventOpt = {
+              slackChannel: channelId.slackChannel,
               color: '00FF00',
               title: '일정 등록 알림',
               summary: eventSummary,
@@ -121,6 +162,7 @@ const calendarEventHandler = async (req, res) => {
             await sendSlackMessage(eventOpt);
           } else {
             const eventOpt = {
+              slackChannel: channelId.slackChannel,
               color: '0000FF',
               title: '일정 변경 알림',
               summary: eventSummary,
@@ -132,6 +174,7 @@ const calendarEventHandler = async (req, res) => {
           break;
         case 'cancelled':
           const eventOpt = {
+            slackChannel: channelId.slackChannel,
             color: 'FF0000',
             title: '일정 삭제 알림',
             summary: eventSummary,
@@ -151,7 +194,7 @@ const calendarEventHandler = async (req, res) => {
 };
 
 // 발생한 이벤트가 어떤 것인지 파악하는 로직
-const getCalendarEvent = async (accessToken) => {
+const getCalendarEvent = async (accessToken, calendarId) => {
   const now = new Date(Date.now() - 10 * 1000);
   const updatedTime = now.toISOString();
 

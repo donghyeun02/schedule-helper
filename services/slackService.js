@@ -1,18 +1,16 @@
-const { createEventAdapter } = require('@slack/events-api');
 const { WebClient } = require('@slack/web-api');
+const {
+  googleLogin,
+  channelRegistration,
+  registerSelectedChannel,
+} = require('../utils/slackHome');
 
-const slackEvents = createEventAdapter(process.env.SLACK_SECRET);
 const web = new WebClient(process.env.SLACK_BOT_TOKEN);
-const slackChannel = process.env.CONVERSATION_ID;
-
-const eventSubscriptions = slackEvents.requestListener();
-
-slackEvents.on('error : ', console.error);
 
 const sendSlackMessage = async (eventOpt) => {
   try {
     const option = {
-      channel: slackChannel,
+      channel: eventOpt.slackChannel,
       blocks: [
         {
           type: 'header',
@@ -54,4 +52,51 @@ const sendSlackMessage = async (eventOpt) => {
   }
 };
 
-module.exports = { eventSubscriptions, sendSlackMessage };
+const handleButton = async (req, res) => {
+  try {
+    const payload = JSON.parse(req.body.payload);
+
+    console.log('패이로드 : ', payload);
+    const actionType = payload.type;
+
+    switch (actionType) {
+      case 'block_actions':
+        const actionId = payload.actions[0].action_id;
+
+        if (actionId === 'sqHGX') {
+          googleLogin({
+            ack: () => {},
+            body: payload,
+            client: web,
+          });
+        } else if (actionId === '5U0Ou') {
+          channelRegistration({
+            ack: () => {},
+            body: payload,
+            client: web,
+          });
+        }
+        break;
+      case 'view_submission':
+        const callbackId = payload.view.callback_id;
+
+        if (callbackId === 'channel_selection') {
+          registerSelectedChannel({
+            ack: () => {},
+            body: payload,
+            client: web,
+          });
+        }
+        break;
+    }
+
+    res.sendStatus(200);
+  } catch (error) {
+    console.error('버튼 핸들러 에러 :', error);
+  }
+};
+
+module.exports = {
+  sendSlackMessage,
+  handleButton,
+};

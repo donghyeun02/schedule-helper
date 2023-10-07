@@ -5,6 +5,7 @@ const logger = require('morgan');
 const cors = require('cors');
 const router = require('./routes');
 const { slackReceiver, slackApp } = require('./utils/slackHome');
+const { appDataSource } = require('./models/dataSource');
 
 const app = express();
 
@@ -28,6 +29,14 @@ slackApp.start(slackPort).then(() => {
   console.log(`Slack app is running on port ${slackPort}`);
 });
 
-app.listen(port, () => {
+app.listen(port, async () => {
   console.log(`Express app is running on port ${port}`);
+  await appDataSource
+    .initialize()
+    .then(() => {
+      console.log('Data Source has been initialized!');
+    })
+    .catch((err) => {
+      console.error('Error during Data Source initialization:', err);
+    });
 });

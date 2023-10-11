@@ -26,13 +26,13 @@ const emailExist = async (email) => {
 const getCalendarId = async (email) => {
   const [calendarId] = await appDataSource.query(
     `
-    SELECT calendar
+    SELECT calendar calendar
     FROM webhooks
     WHERE user_email = ?`,
     [email]
   );
 
-  return calendarId;
+  return calendarId.calendar;
 };
 const createWebHook = async (resourceId, email) => {
   return await appDataSource.query(
@@ -42,6 +42,40 @@ const createWebHook = async (resourceId, email) => {
     WHERE user_email = ?;`,
     [resourceId, email]
   );
+};
+
+const getUserEmailByResourceId = async (resourceId) => {
+  const [userEmail] = await appDataSource.query(
+    `
+    SELECT user_email email
+    FROM webhooks
+    WHERE resource_id = ?;`,
+    [resourceId]
+  );
+
+  return userEmail.email;
+};
+
+const saveRefreshToken = async (refreshToken, email) => {
+  return await appDataSource.query(
+    `
+    UPDATE users
+    SET refresh_token = ?
+    WHERE email = ?;`,
+    [refreshToken, email]
+  );
+};
+
+const getRefreshTokenByEmail = async (email) => {
+  const [token] = await appDataSource.query(
+    `
+    SELECT refresh_token refreshToken
+    FROM users
+    WHERE email = ?`,
+    [email]
+  );
+
+  return token.refreshToken;
 };
 
 const webHookExistByEmail = async (email) => {
@@ -63,5 +97,8 @@ module.exports = {
   emailExist,
   getCalendarId,
   createWebHook,
+  getUserEmailByResourceId,
+  saveRefreshToken,
+  getRefreshTokenByEmail,
   webHookExistByEmail,
 };

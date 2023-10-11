@@ -40,7 +40,7 @@ const getSlackChannel = async (email) => {
     [email]
   );
 
-  return slackChannel;
+  return slackChannel.slackChannel;
 };
 
 module.exports = {

@@ -102,6 +102,15 @@ const settingReminderTime = async (time, userEmail) => {
   );
 };
 
+const getEmailByReminderTime = async (time) => {
+  return await appDataSource.query(
+    `
+    SELECT email
+    FROM users
+    WHERE reminder_time = ?`,
+    [time]
+  );
+};
 module.exports = {
   createUser,
   emailExist,
@@ -112,4 +121,5 @@ module.exports = {
   getRefreshTokenByEmail,
   webHookExistByEmail,
   settingReminderTime,
+  getEmailByReminderTime,
 };

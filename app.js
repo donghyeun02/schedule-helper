@@ -6,6 +6,7 @@ const cors = require('cors');
 const router = require('./routes');
 const { slackApp } = require('./utils/slackHome');
 const { appDataSource } = require('./models/dataSource');
+const { calendarReminder } = require('./utils/scheduler');
 
 const app = express();
 
@@ -38,3 +39,5 @@ app.listen(port, async () => {
       console.error('Error during Data Source initialization:', err);
     });
 });
+
+calendarReminder;

@@ -4,8 +4,9 @@ const express = require('express');
 const logger = require('morgan');
 const cors = require('cors');
 const router = require('./routes');
-const { slackReceiver, slackApp } = require('./utils/slackHome');
+const { slackApp } = require('./utils/slackHome');
 const { appDataSource } = require('./models/dataSource');
+const { calendarReminder } = require('./utils/scheduler');
 
 const app = express();
 
@@ -23,8 +24,6 @@ app.get('/ping', (req, res) => {
   res.json({ message: 'pong' });
 });
 
-app.use('/slack/events', slackReceiver.router);
-
 slackApp.start(slackPort).then(() => {
   console.log(`Slack app is running on port ${slackPort}`);
 });
@@ -40,3 +39,5 @@ app.listen(port, async () => {
       console.error('Error during Data Source initialization:', err);
     });
 });
+
+calendarReminder;

@@ -4,7 +4,7 @@ const express = require('express');
 const logger = require('morgan');
 const cors = require('cors');
 const router = require('./routes');
-const { slackReceiver, slackApp } = require('./utils/slackHome');
+const { slackApp } = require('./utils/slackHome');
 const { appDataSource } = require('./models/dataSource');
 
 const app = express();
@@ -22,8 +22,6 @@ const slackPort = process.env.SLACK_PORT;
 app.get('/ping', (req, res) => {
   res.json({ message: 'pong' });
 });
-
-app.use('/slack/events', slackReceiver.router);
 
 slackApp.start(slackPort).then(() => {
   console.log(`Slack app is running on port ${slackPort}`);

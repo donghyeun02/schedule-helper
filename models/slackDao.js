@@ -1,33 +1,53 @@
 const { appDataSource } = require('./dataSource');
 
-const getUserWebhook = async (email) => {
-  const [result] = await appDataSource.query(
-    `
-  SELECT id
-  FROM webhooks
-  WHERE user_email = ?`,
-    [email]
-  );
-
-  return result;
-};
-
-const createWebhook = async (email, slackChannel, calendar) => {
-  return await appDataSource.query(
-    `
-    INSERT INTO webhooks(user_email, slack_channel, calendar)
-    VALUES (?, ? ,?)`,
-    [email, slackChannel, calendar]
-  );
-};
-
-const updateWebhook = async (email, slackChannel, calendar) => {
+const updateCalendarId = async (calendar, teamId) => {
   return await appDataSource.query(
     `
     UPDATE webhooks
-    SET slack_channel = ?, calendar = ?
-    WHERE user_email = ?`,
-    [slackChannel, calendar, email]
+    SET calendar = ?
+    WHERE slack_team_id = ?`,
+    [calendar, teamId]
+  );
+};
+
+const updateEmailAndTeamId = async (email, teamId) => {
+  return await appDataSource.query(
+    `
+    INSERT INTO webhooks(user_email, slack_team_id)
+    VALUES (?, ?)`,
+    [email, teamId]
+  );
+};
+
+const getEmailByTeamId = async (teamId) => {
+  const [email] = await appDataSource.query(
+    `
+    SELECT user_email email
+    FROM webhooks
+    WHERE slack_team_id = ?`,
+    [teamId]
+  );
+
+  return email.email;
+};
+
+const updateReminderTime = async (email, time) => {
+  return await appDataSource.query(
+    `
+    UPDATE users
+    SET reminder_time = ?
+    WHERE email = ?`,
+    [time, email]
+  );
+};
+
+const updateSlackChannel = async (teamId, slackChannel) => {
+  return await appDataSource.query(
+    `
+    UPDATE webhooks
+    SET slack_channel = ?
+    WHERE slack_team_id = ?`,
+    [slackChannel, teamId]
   );
 };
 
@@ -44,8 +64,10 @@ const getSlackChannel = async (email) => {
 };
 
 module.exports = {
-  getUserWebhook,
-  createWebhook,
-  updateWebhook,
+  updateCalendarId,
+  updateEmailAndTeamId,
+  getEmailByTeamId,
+  updateReminderTime,
+  updateSlackChannel,
   getSlackChannel,
 };

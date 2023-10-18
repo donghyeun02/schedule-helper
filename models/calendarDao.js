@@ -92,6 +92,16 @@ const webHookExistByEmail = async (email) => {
   return webHookExist;
 };
 
+const settingReminderTime = async (time, userEmail) => {
+  return await appDataSource.query(
+    `
+    UPDATE users
+    SET reminder_time = ?
+    WHERE email = ?`,
+    [time, userEmail]
+  );
+};
+
 module.exports = {
   createUser,
   emailExist,
@@ -101,4 +111,5 @@ module.exports = {
   saveRefreshToken,
   getRefreshTokenByEmail,
   webHookExistByEmail,
+  settingReminderTime,
 };

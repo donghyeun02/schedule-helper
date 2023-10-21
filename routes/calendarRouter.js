@@ -4,7 +4,7 @@ const calendarService = require('../services/calendarService');
 const router = express.Router();
 
 router.get('/', calendarService.googleLogin);
-router.get('/authcode', calendarService.setUpCalendarWebhook);
-router.post('/calendar-webhook', calendarService.calendarEventHandler);
+router.get('/authcode', calendarService.googleOAuth);
+router.post('/calendar-webhook', calendarService.webhookEventHandler);
 
 module.exports = router;

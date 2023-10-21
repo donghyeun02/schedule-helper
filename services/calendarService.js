@@ -1,45 +1,51 @@
 const { v4 } = require('uuid');
 const { google } = require('googleapis');
-
 const { oauth2Client } = require('../utils/oauth2');
 const { sendSlackMessage } = require('./slackService');
 const {
   createUser,
-  emailExist,
-  getCalendarId,
-  createWebHook,
   getUserEmailByResourceId,
-  saveRefreshToken,
   getRefreshTokenByEmail,
-  webHookExistByEmail,
+  getCalendarId,
 } = require('../models/calendarDao');
 const { getSlackChannel } = require('../models/slackDao');
+const {
+  slackApp,
+  getCalendarList,
+  afterLoginBlock,
+} = require('../utils/slackHome');
 
 const calendar = google.calendar('v3');
 
 // auth code를 얻기 위한 구글 로그인 과정
 const googleLogin = async (req, res) => {
+  const slackUserId = JSON.stringify(req.query.slackUserId);
+
   const oauth2Url = oauth2Client.generateAuthUrl({
     access_type: 'offline',
     scope: [
       'https://www.googleapis.com/auth/calendar.events.readonly',
+      'https://www.googleapis.com/auth/calendar.readonly',
       'https://www.googleapis.com/auth/userinfo.email',
     ],
     response_type: 'code',
+    state: slackUserId,
   });
 
   res.redirect(oauth2Url);
 };
 
 // 구글 로그인 후 로직
-const setUpCalendarWebhook = async (req, res) => {
+const googleOAuth = async (req, res) => {
   try {
     const authCode = req.query.code;
+    const slackUserId = JSON.parse(req.query.state);
 
     const getToken = await oauth2Client.getToken({
       code: authCode,
       scope: [
         'https://www.googleapis.com/auth/calendar.events.readonly',
+        'https://www.googleapis.com/auth/calendar.readonly',
         'https://www.googleapis.com/auth/userinfo.email',
       ],
       access_type: 'offline',
@@ -59,67 +65,29 @@ const setUpCalendarWebhook = async (req, res) => {
 
     const userEmail = userInfo.data.email;
 
-    const existEmail = await emailExist(userEmail);
-    const calendarId = await getCalendarId(userEmail);
+    await createUser(userEmail, refreshToken, slackUserId);
 
-    if (existEmail.count === '0') {
-      await createUser(userEmail);
-    }
+    const option = await getCalendarList(slackUserId);
 
-    if (refreshToken) {
-      await saveRefreshToken(refreshToken, userEmail);
-    }
+    const blocks = await afterLoginBlock(option);
 
-    const webhookExist = await webHookExistByEmail(userEmail);
+    await slackApp.client.views.publish({
+      user_id: slackUserId,
+      view: {
+        type: 'home',
+        callback_id: 'home_view',
+        blocks: blocks,
+      },
+    });
 
-    if (webhookExist.webhook_exists === '0') {
-      const resourceId = await calendarWebhook(accessToken, calendarId);
-      await createWebHook(resourceId, userEmail);
-
-      return res.status(200).json({ message: '웹훅이 등록되었습니다.' });
-    } else {
-      return res
-        .status(200)
-        .json({ message: '이미 웹훅이 등록되어 있습니다.' });
-    }
+    return res.status(200).json({ message: 'OK' });
   } catch (error) {
     res.status(500).json({ message: error.stack });
   }
 };
 
-// 웹훅
-const calendarWebhook = async (accessToken, calendarId) => {
-  try {
-    const webhookId = v4();
-
-    const webhook = await calendar.events.watch({
-      resource: {
-        id: webhookId,
-        type: 'web_hook',
-        address: 'https://donghyeun02.link/calendar-webhook',
-        params: {
-          ttl: 300,
-        },
-      },
-      calendarId: calendarId,
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        Accept: `application/json`,
-      },
-    });
-
-    const { data } = webhook;
-
-    console.log('Google Calendar Webhook이 설정되었습니다. : ', data);
-    return data.resourceId;
-  } catch (error) {
-    console.error('Google Calendar Webhook 설정 에러 :', error);
-    throw error;
-  }
-};
-
 // 이벤트 발생 시 실행되는 로직
-const calendarEventHandler = async (req, res) => {
+const webhookEventHandler = async (req, res) => {
   try {
     const eventData = req.headers;
 
@@ -251,6 +219,6 @@ const formatDateTime = (dateTime, tz) => {
 
 module.exports = {
   googleLogin,
-  setUpCalendarWebhook,
-  calendarEventHandler,
+  googleOAuth,
+  webhookEventHandler,
 };

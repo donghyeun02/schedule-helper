@@ -25,7 +25,7 @@ app.get('/ping', (req, res) => {
 });
 
 slackApp.start(slackPort).then(() => {
-  console.log(`Slack app is running on port ${slackPort}`);
+  console.log(`Slack app is running in Socket Mode`);
 });
 
 app.listen(port, async () => {

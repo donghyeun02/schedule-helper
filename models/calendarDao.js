@@ -1,26 +1,32 @@
 const { appDataSource } = require('./dataSource');
 
-const createUser = async (email) => {
+const createUser = async (email, refreshToken, slackUserId) => {
   await appDataSource.query(
     `
-    INSERT INTO users(email)
-    VALUES (?);
+    INSERT INTO users(email, refresh_token, is_deleted, slack_user_id)
+    VALUES (?, ?, 0, ?);
     `,
+    [email, refreshToken, slackUserId]
+  );
+
+  await appDataSource.query(
+    `
+    INSERT INTO webhooks(user_email)
+    VALUES (?)`,
     [email]
   );
 };
 
-const emailExist = async (email) => {
-  const [emailExist] = await appDataSource.query(
+const userExist = async (slackUserId) => {
+  const user = await appDataSource.query(
     `
     SELECT COUNT(*) AS count
     FROM users
-    WHERE email = ?;
-    `,
-    [email]
+    WHERE slack_user_id = ?;`,
+    [slackUserId]
   );
 
-  return emailExist;
+  return user[0].count;
 };
 
 const getCalendarId = async (email) => {
@@ -34,13 +40,13 @@ const getCalendarId = async (email) => {
 
   return calendarId.calendar;
 };
-const createWebHook = async (resourceId, email) => {
+const updateWebHook = async (resourceId, calendarId) => {
   return await appDataSource.query(
     `
     UPDATE webhooks
     SET resource_id = ?
-    WHERE user_email = ?;`,
-    [resourceId, email]
+    WHERE calendar = ?;`,
+    [resourceId, calendarId]
   );
 };
 
@@ -56,16 +62,6 @@ const getUserEmailByResourceId = async (resourceId) => {
   return userEmail.email;
 };
 
-const saveRefreshToken = async (refreshToken, email) => {
-  return await appDataSource.query(
-    `
-    UPDATE users
-    SET refresh_token = ?
-    WHERE email = ?;`,
-    [refreshToken, email]
-  );
-};
-
 const getRefreshTokenByEmail = async (email) => {
   const [token] = await appDataSource.query(
     `
@@ -78,28 +74,16 @@ const getRefreshTokenByEmail = async (email) => {
   return token.refreshToken;
 };
 
-const webHookExistByEmail = async (email) => {
-  const [webHookExist] = await appDataSource.query(
+const getRefreshTokenByUserID = async (slackUserId) => {
+  const [token] = await appDataSource.query(
     `
-    SELECT 
-    CASE WHEN resource_id IS NULL THEN 0 
-    ELSE 1 END AS webhook_exists
-    FROM webhooks
-    WHERE user_email = ?;
-  `,
-    [email]
+    SELECT refresh_token refreshToken
+    FROM users
+    WHERE slack_user_id = ?`,
+    [slackUserId]
   );
-  return webHookExist;
-};
 
-const settingReminderTime = async (time, userEmail) => {
-  return await appDataSource.query(
-    `
-    UPDATE users
-    SET reminder_time = ?
-    WHERE email = ?`,
-    [time, userEmail]
-  );
+  return token.refreshToken;
 };
 
 const getEmailByReminderTime = async (time) => {
@@ -111,15 +95,14 @@ const getEmailByReminderTime = async (time) => {
     [time]
   );
 };
+
 module.exports = {
   createUser,
-  emailExist,
+  userExist,
   getCalendarId,
-  createWebHook,
+  updateWebHook,
   getUserEmailByResourceId,
-  saveRefreshToken,
   getRefreshTokenByEmail,
-  webHookExistByEmail,
-  settingReminderTime,
+  getRefreshTokenByUserID,
   getEmailByReminderTime,
 };

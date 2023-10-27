@@ -87,12 +87,46 @@ const getRefreshTokenByUserID = async (slackUserId) => {
 };
 
 const getEmailByReminderTime = async (time) => {
-  return await appDataSource.query(
+  const user = await appDataSource.query(
     `
     SELECT email
     FROM users
     WHERE reminder_time = ?`,
     [time]
+  );
+
+  return user;
+};
+
+const getUserDeleted = async (slackUserId) => {
+  const isDeleted = await appDataSource.query(
+    `
+    SELECT is_deleted isDeleted
+    FROM users
+    WHERE slack_user_id = ?;`,
+    [slackUserId]
+  );
+
+  return isDeleted.isDeleted;
+};
+
+const deleteUser = async (slackUserId) => {
+  await appDataSource.query(
+    `
+    UPDATE users
+    SET is_deleted = 1
+    WHERE slack_user_id = ?`,
+    [slackUserId]
+  );
+};
+
+const insertUser = async (slackUserId) => {
+  await appDataSource.query(
+    `
+    UPDATE users
+    SET is_deleted = 0
+    WHERE slack_user_id = ?`,
+    [slackUserId]
   );
 };
 
@@ -105,4 +139,7 @@ module.exports = {
   getRefreshTokenByEmail,
   getRefreshTokenByUserID,
   getEmailByReminderTime,
+  getUserDeleted,
+  deleteUser,
+  insertUser,
 };

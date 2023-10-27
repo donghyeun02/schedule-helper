@@ -47,4 +47,27 @@ const sendSlackMessage = async (eventOpt) => {
   }
 };
 
-module.exports = { sendSlackMessage };
+const sendReminderMessage = async (eventOpt) => {
+  try {
+    const option = {
+      channel: eventOpt.slackChannel,
+      blocks: [
+        {
+          type: 'header',
+          text: {
+            type: 'plain_text',
+            text: eventOpt.title,
+            emoji: true,
+          },
+        },
+      ],
+      attachments: eventOpt.attachments,
+    };
+
+    await web.chat.postMessage(option);
+  } catch (error) {
+    console.error('Slack 메시지 전송 에러 :', error);
+  }
+};
+
+module.exports = { sendSlackMessage, sendReminderMessage };

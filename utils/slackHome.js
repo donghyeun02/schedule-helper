@@ -13,6 +13,8 @@ const {
   userExist,
   getRefreshTokenByUserID,
   updateWebHook,
+  getUserDeleted,
+  deleteUser,
 } = require('../models/calendarDao');
 const { oauth2Client } = require('../utils/oauth2');
 
@@ -28,6 +30,33 @@ const slackApp = new App({
   token: process.env.SLACK_BOT_TOKEN,
   receiver: socketModeReceiver,
 });
+
+const beforeLoginBlock = [
+  {
+    type: 'header',
+    text: {
+      type: 'plain_text',
+      text: '구글 캘린더 알리미',
+    },
+  },
+  {
+    type: 'actions',
+    elements: [
+      {
+        type: 'button',
+        text: {
+          type: 'plain_text',
+          text: 'Google Login',
+          emoji: true,
+        },
+        value: 'google login',
+        url: `https://donghyeun02.link/?slackUserId=${slackUserId}`,
+        style: 'primary',
+        action_id: 'google_login',
+      },
+    ],
+  },
+];
 
 const afterLoginBlock = async (option) => {
   const blocks = [
@@ -147,34 +176,10 @@ slackApp.event('app_home_opened', async ({ event, client }) => {
     const slackUserId = event.user;
 
     const ExistingUser = await userExist(slackUserId);
+    const isDeleted = await getUserDeleted(slackUserId);
 
-    if (ExistingUser === '0') {
-      const blocks = [
-        {
-          type: 'header',
-          text: {
-            type: 'plain_text',
-            text: '구글 캘린더 알리미',
-          },
-        },
-        {
-          type: 'actions',
-          elements: [
-            {
-              type: 'button',
-              text: {
-                type: 'plain_text',
-                text: 'Google Login',
-                emoji: true,
-              },
-              value: 'google login',
-              url: `https://donghyeun02.link/?slackUserId=${slackUserId}`,
-              style: 'primary',
-              action_id: 'google_login',
-            },
-          ],
-        },
-      ];
+    if (ExistingUser === '0' || (ExistingUser === '1' && isDeleted === '1')) {
+      const blocks = beforeLoginBlock;
 
       return await client.views.publish({
         user_id: slackUserId,
@@ -364,6 +369,25 @@ const getCalendarList = async (slackUserId) => {
 
   return calendarOptions;
 };
+
+slackApp.action('google_logout', async ({ ack, body }) => {
+  ack();
+
+  const userId = body.user.id;
+
+  await deleteUser(userId);
+
+  const blocks = beforeLoginBlock;
+
+  return await client.views.publish({
+    user_id: slackUserId,
+    view: {
+      type: 'home',
+      callback_id: 'home_view',
+      blocks: blocks,
+    },
+  });
+});
 
 const calendarWebhook = async (userId, calendarId) => {
   try {

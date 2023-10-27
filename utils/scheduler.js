@@ -5,8 +5,13 @@ const { oauth2Client } = require('./oauth2');
 const {
   getEmailByReminderTime,
   getCalendarId,
+  getRefreshTokenByEmail,
 } = require('../models/calendarDao');
-const { sendSlackMessage } = require('../services/slackService');
+const { getSlackChannel } = require('../models/slackDao');
+const {
+  sendSlackMessage,
+  sendReminderMessage,
+} = require('../services/slackService');
 
 const calendar = google.calendar('v3');
 
@@ -15,14 +20,24 @@ const calendarReminder = schedule.scheduleJob('0 * * * *', async () => {
 
   const currentDate = new Date();
 
-  const currentHour = formatCurrentHour(currentDate);
+  const utcNow =
+    currentDate.getTime() + currentDate.getTimezoneOffset() * 60 * 1000;
+  const koreaTimeDiff = 9 * 60 * 60 * 1000;
+  const koreaDate = new Date(utcNow + koreaTimeDiff);
+
+  const currentHour = formatCurrentHour(koreaDate);
 
   const users = await getEmailByReminderTime(currentHour);
 
   for (const user of users) {
     const email = user.email;
 
+    const refreshToken = await getRefreshTokenByEmail(email);
+
+    oauth2Client.setCredentials({ refresh_token: refreshToken });
+
     const calendarId = await getCalendarId(email);
+    const channelId = await getSlackChannel(email);
 
     const startOfDay = new Date(currentDate);
     const endOfDay = new Date(currentDate);
@@ -40,13 +55,15 @@ const calendarReminder = schedule.scheduleJob('0 * * * *', async () => {
         orderBy: 'startTime',
       })
       .then((res) => {
-        return res.data.itemsl;
+        return res.data.items;
       });
 
-    if (events.length === 0) {
+    if (events === undefined) {
+      console.error('이벤트 리스트 오류');
+    } else if (events.length === 0) {
       const eventOpt = {
         slackChannel: channelId,
-        color: 'good',
+        color: 'FFFF00',
         title: '당일 일정 알림',
         summary: '일정이 없습니다.',
         text: `당일 일정이 없습니다 !`,
@@ -54,25 +71,47 @@ const calendarReminder = schedule.scheduleJob('0 * * * *', async () => {
 
       await sendSlackMessage(eventOpt);
     } else {
-      const eventText = events
+      const eventAttachments = events
         .map((event) => {
           const startTime = formatDateTime(
             event.start.dateTime,
             event.start.timeZone
           );
-          return `제목: ${event.summary}, 시작 시간: ${startTime}`;
+          const endTime = formatDateTime(
+            event.end.dateTime,
+            event.end.timeZone
+          );
+          return {
+            color: 'FFFF00',
+            fallback: 'Slack attachment-level `fallback`',
+            blocks: [
+              {
+                type: 'header',
+                text: {
+                  type: 'plain_text',
+                  text: `*🗓️ ${event.summary}*`,
+                  emoji: true,
+                },
+                type: 'section',
+                text: {
+                  type: 'mrkdwn',
+                  text: `일정 시작 : ${startTime}   일정 종료 : ${endTime}`,
+                },
+              },
+            ],
+          };
         })
         .join('\n');
 
       const eventOpt = {
         slackChannel: channelId,
-        color: 'good',
+        color: 'FFFF00',
         title: '당일 일정 알림',
-        summary: '당일 일정입니다.',
-        text: eventText,
+        summary: '당일 일정',
+        attachments: eventAttachments,
       };
 
-      await sendSlackMessage(eventOpt);
+      await sendReminderMessage(eventOpt);
     }
   }
 });

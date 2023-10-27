@@ -1,4 +1,3 @@
-const { v4 } = require('uuid');
 const { google } = require('googleapis');
 const { oauth2Client } = require('../utils/oauth2');
 const { sendSlackMessage } = require('./slackService');
@@ -52,6 +51,7 @@ const googleOAuth = async (req, res) => {
       prompt: 'consent',
     });
 
+    console.log(getToken);
     const accessToken = getToken.tokens.access_token;
     const refreshToken = getToken.tokens.refresh_token;
 

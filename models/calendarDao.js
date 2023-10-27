@@ -120,6 +120,16 @@ const deleteUser = async (slackUserId) => {
   );
 };
 
+const insertUser = async (slackUserId) => {
+  await appDataSource.query(
+    `
+    UPDATE users
+    SET is_deleted = 0
+    WHERE slack_user_id = ?`,
+    [slackUserId]
+  );
+};
+
 module.exports = {
   createUser,
   userExist,
@@ -131,4 +141,5 @@ module.exports = {
   getEmailByReminderTime,
   getUserDeleted,
   deleteUser,
+  insertUser,
 };

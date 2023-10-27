@@ -7,6 +7,7 @@ const {
   getRefreshTokenByEmail,
   getCalendarId,
   userExist,
+  insertUser,
 } = require('../models/calendarDao');
 const { getSlackChannel } = require('../models/slackDao');
 const {
@@ -69,6 +70,8 @@ const googleOAuth = async (req, res) => {
       const userEmail = userInfo.data.email;
 
       await createUser(userEmail, refreshToken, slackUserId);
+    } else if (ExistingUser === '1') {
+      await insertUser(slackUserId);
     }
 
     const option = await getCalendarList(slackUserId);

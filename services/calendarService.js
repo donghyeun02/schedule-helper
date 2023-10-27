@@ -1,4 +1,3 @@
-const { v4 } = require('uuid');
 const { google } = require('googleapis');
 const { oauth2Client } = require('../utils/oauth2');
 const { sendSlackMessage } = require('./slackService');
@@ -7,6 +6,8 @@ const {
   getUserEmailByResourceId,
   getRefreshTokenByEmail,
   getCalendarId,
+  userExist,
+  insertUser,
 } = require('../models/calendarDao');
 const { getSlackChannel } = require('../models/slackDao');
 const {
@@ -41,31 +42,37 @@ const googleOAuth = async (req, res) => {
     const authCode = req.query.code;
     const slackUserId = JSON.parse(req.query.state);
 
-    const getToken = await oauth2Client.getToken({
-      code: authCode,
-      scope: [
-        'https://www.googleapis.com/auth/calendar.events.readonly',
-        'https://www.googleapis.com/auth/calendar.readonly',
-        'https://www.googleapis.com/auth/userinfo.email',
-      ],
-      access_type: 'offline',
-      prompt: 'consent',
-    });
+    const ExistingUser = await userExist(slackUserId);
 
-    const accessToken = getToken.tokens.access_token;
-    const refreshToken = getToken.tokens.refresh_token;
+    if (ExistingUser === '0') {
+      const getToken = await oauth2Client.getToken({
+        code: authCode,
+        scope: [
+          'https://www.googleapis.com/auth/calendar.events.readonly',
+          'https://www.googleapis.com/auth/calendar.readonly',
+          'https://www.googleapis.com/auth/userinfo.email',
+        ],
+        access_type: 'offline',
+        prompt: 'consent',
+      });
 
-    oauth2Client.credentials = {
-      access_token: accessToken,
-      refresh_token: refreshToken,
-    };
+      const accessToken = getToken.tokens.access_token;
+      const refreshToken = getToken.tokens.refresh_token;
 
-    const oauth2 = google.oauth2('v2');
-    const userInfo = await oauth2.userinfo.get({ auth: oauth2Client });
+      oauth2Client.credentials = {
+        access_token: accessToken,
+        refresh_token: refreshToken,
+      };
 
-    const userEmail = userInfo.data.email;
+      const oauth2 = google.oauth2('v2');
+      const userInfo = await oauth2.userinfo.get({ auth: oauth2Client });
 
-    await createUser(userEmail, refreshToken, slackUserId);
+      const userEmail = userInfo.data.email;
+
+      await createUser(userEmail, refreshToken, slackUserId);
+    } else if (ExistingUser === '1') {
+      await insertUser(slackUserId);
+    }
 
     const option = await getCalendarList(slackUserId);
 

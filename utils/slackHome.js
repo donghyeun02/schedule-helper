@@ -15,6 +15,8 @@ const {
   updateWebHook,
   getUserDeleted,
   deleteUser,
+  getWebhookIdAndResourceId,
+  deleteWebhook,
 } = require('../models/calendarDao');
 const { oauth2Client } = require('../utils/oauth2');
 
@@ -124,6 +126,24 @@ const afterLoginBlock = async (option) => {
         value: 'webhook',
         style: 'primary',
         action_id: 'webhook_button',
+      },
+    },
+    {
+      type: 'section',
+      text: {
+        type: 'mrkdwn',
+        text: '웹훅을 종료합니다.',
+      },
+      accessory: {
+        type: 'button',
+        text: {
+          type: 'plain_text',
+          text: '웹훅 종료',
+          emoji: true,
+        },
+        value: 'delete webhook',
+        style: 'primary',
+        action_id: 'delete_webhook',
       },
     },
     {
@@ -322,6 +342,70 @@ slackApp.action('webhook_button', async ({ ack, body, client }) => {
   }
 });
 
+slackApp.action('delete_webhook', async ({ ack, body, client }) => {
+  ack();
+
+  const userId = body.user.id;
+
+  const webhookData = await getWebhookIdAndResourceId(userId);
+  const refreshToken = await getRefreshTokenByUserID(userId);
+
+  if (!webhookData.resourceId) {
+    await client.views.open({
+      trigger_id: body.trigger_id,
+      view: {
+        type: 'modal',
+        callback_id: 'success_modal',
+        title: {
+          type: 'plain_text',
+          text: '웹훅 종료 오류',
+        },
+        blocks: [
+          {
+            type: 'section',
+            block_id: 'error_message',
+            text: {
+              type: 'mrkdwn',
+              text: '등록된 웹훅이 없습니다.',
+            },
+          },
+        ],
+      },
+    });
+  } else if (!!webhookData.resourceId) {
+    await oauth2Client.credentials({ refresh_token: refreshToken });
+
+    await calendar.events.stop({
+      id: webhookData.webhookId,
+      resourceId: webhookData.resourceId,
+    });
+
+    await deleteWebhook(userId);
+
+    await client.views.open({
+      trigger_id: body.trigger_id,
+      view: {
+        type: 'modal',
+        callback_id: 'success_modal',
+        title: {
+          type: 'plain_text',
+          text: '웹훅 종료',
+        },
+        blocks: [
+          {
+            type: 'section',
+            block_id: 'error_message',
+            text: {
+              type: 'mrkdwn',
+              text: '등록된 웹훅이 종료되었습니다.',
+            },
+          },
+        ],
+      },
+    });
+  }
+});
+
 slackApp.action('time', async ({ ack, body }) => {
   ack();
 
@@ -424,7 +508,7 @@ const calendarWebhook = async (userId, calendarId) => {
 
     const resourceId = data.resourceId;
 
-    await updateWebHook(resourceId, calendarId);
+    await updateWebHook(webhookId, resourceId, calendarId);
 
     console.log('Google Calendar Webhook이 설정되었습니다. : ', data);
   } catch (error) {

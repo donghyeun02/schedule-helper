@@ -1,6 +1,70 @@
 const { WebClient } = require('@slack/web-api');
+const {
+  appHomeOpened,
+  selectedChannel,
+  selectedCalendar,
+  registerWebhook,
+  registerReminder,
+  googleLogout,
+} = require('../utils/slackHome');
 
 const web = new WebClient(process.env.SLACK_BOT_TOKEN);
+
+const handleEvent = async (req, res) => {
+  const event = req.body.event;
+
+  if (event.type === 'app_home_opened') {
+    await appHomeOpened({
+      event: event,
+      client: web,
+    });
+  }
+
+  return res.sendStatus(200);
+};
+
+const handleButton = async (req, res) => {
+  const payload = JSON.parse(req.body.payload);
+
+  const actionId = payload.actions[0].action_id;
+
+  switch (actionId) {
+    case 'selected_channel':
+      selectedChannel({
+        ack: () => {},
+        body: payload,
+      });
+      break;
+    case 'selected_calendar':
+      selectedCalendar({
+        ack: () => {},
+        body: payload,
+      });
+      break;
+    case 'webhook_button':
+      registerWebhook({
+        ack: () => {},
+        body: payload,
+        client: web,
+      });
+      break;
+    case 'time':
+      registerReminder({
+        ack: () => {},
+        body: payload,
+      });
+      break;
+    case 'google_logout':
+      googleLogout({
+        ack: () => {},
+        body: payload,
+        client: web,
+      });
+      break;
+  }
+
+  return res.sendStatus(200);
+};
 
 const sendSlackMessage = async (eventOpt) => {
   try {
@@ -70,4 +134,9 @@ const sendReminderMessage = async (eventOpt) => {
   }
 };
 
-module.exports = { sendSlackMessage, sendReminderMessage };
+module.exports = {
+  handleButton,
+  handleEvent,
+  sendSlackMessage,
+  sendReminderMessage,
+};

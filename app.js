@@ -4,7 +4,7 @@ const express = require('express');
 const logger = require('morgan');
 const cors = require('cors');
 const router = require('./routes');
-const { slackApp } = require('./utils/slackHome');
+
 const { appDataSource } = require('./models/dataSource');
 const { calendarReminder } = require('./utils/scheduler');
 
@@ -18,14 +18,9 @@ app.use(logger('combined'));
 app.use(router);
 
 const port = process.env.PORT;
-const slackPort = process.env.SLACK_PORT;
 
 app.get('/ping', (req, res) => {
   res.json({ message: 'pong' });
-});
-
-slackApp.start(slackPort).then(() => {
-  console.log(`Slack app is running in Socket Mode`);
 });
 
 app.listen(port, async () => {

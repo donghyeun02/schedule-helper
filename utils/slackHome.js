@@ -303,7 +303,7 @@ const registerWebhook = async ({ ack, body, client }) => {
               block_id: 'error_message',
               text: {
                 type: 'mrkdwn',
-                text: '웹훅이 이미 등록되어 있습니다.',
+                text: '캘린더 구독이 이미 되어있습니다.',
               },
             },
           ],
@@ -331,7 +331,7 @@ const registerWebhook = async ({ ack, body, client }) => {
               block_id: 'error_message',
               text: {
                 type: 'mrkdwn',
-                text: '웹훅이 등록되었습니다.',
+                text: '캘린더 구독이 완료되었습니다.',
               },
             },
           ],
@@ -367,7 +367,7 @@ const dropWebhook = async ({ ack, body, client }) => {
             block_id: 'error_message',
             text: {
               type: 'mrkdwn',
-              text: '등록된 웹훅이 없습니다.',
+              text: '구독된 캘린더가 없습니다.',
             },
           },
         ],
@@ -407,7 +407,7 @@ const dropWebhook = async ({ ack, body, client }) => {
             block_id: 'error_message',
             text: {
               type: 'mrkdwn',
-              text: '등록된 웹훅이 종료되었습니다.',
+              text: '구독된 캘린더가 종료되었습니다.',
             },
           },
         ],

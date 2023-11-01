@@ -1,4 +1,4 @@
-const { App, SocketModeReceiver } = require('@slack/bolt');
+const { App } = require('@slack/bolt');
 const { v4 } = require('uuid');
 const { google } = require('googleapis');
 const {
@@ -22,15 +22,9 @@ const { oauth2Client } = require('../utils/oauth2');
 
 const calendar = google.calendar('v3');
 
-const socketModeReceiver = new SocketModeReceiver({
-  signingSecret: process.env.SLACK_SECRET,
-  appToken: process.env.SLACK_APP_TOKEN,
-  processBeforeResponse: true,
-});
-
 const slackApp = new App({
+  signingSecret: process.env.SLACK_SECRET,
   token: process.env.SLACK_BOT_TOKEN,
-  receiver: socketModeReceiver,
 });
 
 const beforeLoginBlock = async (slackUserId) => {
@@ -195,7 +189,7 @@ const afterLoginBlock = async (option) => {
   return blocks;
 };
 
-slackApp.event('app_home_opened', async ({ event, client }) => {
+const appHomeOpened = async ({ event, client }) => {
   try {
     const slackUserId = event.user;
 
@@ -230,27 +224,27 @@ slackApp.event('app_home_opened', async ({ event, client }) => {
   } catch (error) {
     console.error('Error:', error);
   }
-});
+};
 
-slackApp.action('selected_channel', async ({ ack, body }) => {
+const selectedChannel = async ({ ack, body }) => {
   ack();
 
   const userId = body.user.id;
   const slackChannel = body.actions[0].selected_channel;
 
   await updateSlackChannel(userId, slackChannel);
-});
+};
 
-slackApp.action('selected_calendar', async ({ ack, body }) => {
+const selectedCalendar = async ({ ack, body }) => {
   ack();
 
   const userId = body.user.id;
   const calendar = body.actions[0].selected_option.value;
 
   await updateCalendarId(calendar, userId);
-});
+};
 
-slackApp.action('webhook_button', async ({ ack, body, client }) => {
+const registerWebhook = async ({ ack, body, client }) => {
   ack();
 
   const userId = body.user.id;
@@ -340,9 +334,9 @@ slackApp.action('webhook_button', async ({ ack, body, client }) => {
       console.error('웹훅 등록 오류 :', error);
     }
   }
-});
+};
 
-slackApp.action('delete_webhook', async ({ ack, body, client }) => {
+const deleteWebhook = async ({ ack, body, client }) => {
   ack();
 
   const userId = body.user.id;
@@ -404,16 +398,75 @@ slackApp.action('delete_webhook', async ({ ack, body, client }) => {
       },
     });
   }
-});
+};
 
-slackApp.action('time', async ({ ack, body }) => {
+const registerReminder = async ({ ack, body }) => {
   ack();
 
   const userId = body.user.id;
   const time = body.actions[0].selected_time;
 
   await updateReminderTime(time, userId);
-});
+};
+
+const googleLogout = async ({ ack, body, client }) => {
+  ack();
+
+  const userId = body.user.id;
+
+  await deleteUser(userId);
+
+  const blocks = await beforeLoginBlock(userId);
+
+  return await client.views.publish({
+    user_id: userId,
+    view: {
+      type: 'home',
+      callback_id: 'home_view',
+      blocks: blocks,
+    },
+  });
+};
+
+const calendarWebhook = async (userId, calendarId) => {
+  try {
+    const webhookId = v4();
+
+    const refreshToken = await getRefreshTokenByUserID(userId);
+
+    oauth2Client.setCredentials({ refresh_token: refreshToken });
+
+    const getAccessToken = await oauth2Client.getAccessToken();
+    const accessToken = getAccessToken.token;
+
+    const webhook = await calendar.events.watch({
+      resource: {
+        id: webhookId,
+        type: 'web_hook',
+        address: 'https://donghyeun02.link/calendar-webhook',
+        params: {
+          ttl: 300,
+        },
+      },
+      calendarId: calendarId,
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        Accept: `application/json`,
+      },
+    });
+
+    const { data } = webhook;
+
+    const resourceId = data.resourceId;
+
+    await updateWebHook(webhookId, resourceId, calendarId);
+
+    console.log('Google Calendar Webhook이 설정되었습니다. : ', data);
+  } catch (error) {
+    console.error('Google Calendar Webhook 설정 에러 :', error);
+    throw error;
+  }
+};
 
 const getCalendarList = async (slackUserId) => {
   const refreshToken = await getRefreshTokenByUserID(slackUserId);
@@ -458,63 +511,15 @@ const getCalendarList = async (slackUserId) => {
   return calendarOptions;
 };
 
-slackApp.action('google_logout', async ({ ack, body, client }) => {
-  ack();
-
-  const userId = body.user.id;
-
-  await deleteUser(userId);
-
-  const blocks = await beforeLoginBlock(userId);
-
-  return await client.views.publish({
-    user_id: userId,
-    view: {
-      type: 'home',
-      callback_id: 'home_view',
-      blocks: blocks,
-    },
-  });
-});
-
-const calendarWebhook = async (userId, calendarId) => {
-  try {
-    const webhookId = v4();
-
-    const refreshToken = await getRefreshTokenByUserID(userId);
-
-    oauth2Client.setCredentials({ refresh_token: refreshToken });
-
-    const getAccessToken = await oauth2Client.getAccessToken();
-    const accessToken = getAccessToken.token;
-
-    const webhook = await calendar.events.watch({
-      resource: {
-        id: webhookId,
-        type: 'web_hook',
-        address: 'https://donghyeun02.link/calendar-webhook',
-        params: {
-          ttl: 300,
-        },
-      },
-      calendarId: calendarId,
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        Accept: `application/json`,
-      },
-    });
-
-    const { data } = webhook;
-
-    const resourceId = data.resourceId;
-
-    await updateWebHook(webhookId, resourceId, calendarId);
-
-    console.log('Google Calendar Webhook이 설정되었습니다. : ', data);
-  } catch (error) {
-    console.error('Google Calendar Webhook 설정 에러 :', error);
-    throw error;
-  }
+module.exports = {
+  slackApp,
+  afterLoginBlock,
+  appHomeOpened,
+  selectedChannel,
+  selectedCalendar,
+  registerWebhook,
+  deleteWebhook,
+  registerReminder,
+  googleLogout,
+  getCalendarList,
 };
-
-module.exports = { slackApp, afterLoginBlock, getCalendarList };

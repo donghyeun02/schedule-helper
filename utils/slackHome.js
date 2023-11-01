@@ -15,6 +15,8 @@ const {
   updateWebHook,
   getUserDeleted,
   deleteUser,
+  getWebhookIdAndResourceId,
+  deleteWebhook,
 } = require('../models/calendarDao');
 const { oauth2Client } = require('../utils/oauth2');
 
@@ -119,6 +121,31 @@ const afterLoginBlock = async (option) => {
         style: 'primary',
         action_id: 'webhook_button',
       },
+    },
+    {
+      type: 'actions',
+      elements: [
+        {
+          type: 'button',
+          text: {
+            type: 'plain_text',
+            text: '웹훅 재등록',
+            emoji: true,
+          },
+          value: 're-register webhook',
+          action_id: 're-register_Webhook',
+        },
+        {
+          type: 'button',
+          text: {
+            type: 'plain_text',
+            text: '웹훅 종료',
+            emoji: true,
+          },
+          value: 'drop webhook',
+          action_id: 'delete_webhook',
+        },
+      ],
     },
     {
       type: 'divider',
@@ -316,6 +343,79 @@ const registerWebhook = async ({ ack, body, client }) => {
   }
 };
 
+const dropWebhook = async ({ ack, body, client }) => {
+  ack();
+
+  const userId = body.user.id;
+
+  const webhookData = await getWebhookIdAndResourceId(userId);
+  const refreshToken = await getRefreshTokenByUserID(userId);
+
+  if (!webhookData.resourceId) {
+    await client.views.open({
+      trigger_id: body.trigger_id,
+      view: {
+        type: 'modal',
+        callback_id: 'success_modal',
+        title: {
+          type: 'plain_text',
+          text: '웹훅 종료 오류',
+        },
+        blocks: [
+          {
+            type: 'section',
+            block_id: 'error_message',
+            text: {
+              type: 'mrkdwn',
+              text: '등록된 웹훅이 없습니다.',
+            },
+          },
+        ],
+      },
+    });
+  } else if (!!webhookData.resourceId) {
+    await oauth2Client.setCredentials({ refresh_token: refreshToken });
+
+    const getAccessToken = await oauth2Client.getAccessToken();
+    const accessToken = getAccessToken.token;
+
+    await calendar.channels.stop({
+      resource: {
+        id: webhookData.webhookId,
+        resourceId: webhookData.resourceId,
+      },
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        Accept: `application/json`,
+      },
+    });
+
+    await deleteWebhook(userId);
+
+    await client.views.open({
+      trigger_id: body.trigger_id,
+      view: {
+        type: 'modal',
+        callback_id: 'success_modal',
+        title: {
+          type: 'plain_text',
+          text: '웹훅 종료',
+        },
+        blocks: [
+          {
+            type: 'section',
+            block_id: 'error_message',
+            text: {
+              type: 'mrkdwn',
+              text: '등록된 웹훅이 종료되었습니다.',
+            },
+          },
+        ],
+      },
+    });
+  }
+};
+
 const registerReminder = async ({ ack, body }) => {
   ack();
 
@@ -329,6 +429,29 @@ const googleLogout = async ({ ack, body, client }) => {
   ack();
 
   const userId = body.user.id;
+  const webhookData = await getWebhookIdAndResourceId(userId);
+
+  if (!!webhookData.resourceId) {
+    const refreshToken = await getRefreshTokenByUserID(userId);
+
+    await oauth2Client.setCredentials({ refresh_token: refreshToken });
+
+    const getAccessToken = await oauth2Client.getAccessToken();
+    const accessToken = getAccessToken.token;
+
+    await calendar.channels.stop({
+      resource: {
+        id: webhookData.webhookId,
+        resourceId: webhookData.resourceId,
+      },
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        Accept: `application/json`,
+      },
+    });
+
+    await deleteWebhook(userId);
+  }
 
   await deleteUser(userId);
 
@@ -375,7 +498,7 @@ const calendarWebhook = async (userId, calendarId) => {
 
     const resourceId = data.resourceId;
 
-    await updateWebHook(resourceId, calendarId);
+    await updateWebHook(webhookId, resourceId, calendarId);
 
     console.log('Google Calendar Webhook이 설정되었습니다. : ', data);
   } catch (error) {
@@ -434,6 +557,7 @@ module.exports = {
   selectedChannel,
   selectedCalendar,
   registerWebhook,
+  dropWebhook,
   registerReminder,
   googleLogout,
   getCalendarList,

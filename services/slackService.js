@@ -4,6 +4,7 @@ const {
   selectedChannel,
   selectedCalendar,
   registerWebhook,
+  dropWebhook,
   registerReminder,
   googleLogout,
 } = require('../utils/slackHome');
@@ -48,6 +49,12 @@ const handleButton = async (req, res) => {
         client: web,
       });
       break;
+    case 'delete_webhook':
+      dropWebhook({
+        ack: () => {},
+        body: payload,
+        client: web,
+      });
     case 'time':
       registerReminder({
         ack: () => {},

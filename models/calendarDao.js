@@ -40,13 +40,14 @@ const getCalendarId = async (email) => {
 
   return calendarId.calendar;
 };
-const updateWebHook = async (resourceId, calendarId) => {
+
+const updateWebHook = async (webhookId, resourceId, calendarId) => {
   return await appDataSource.query(
     `
     UPDATE webhooks
-    SET resource_id = ?
+    SET webhook_id = ?, resource_id = ?
     WHERE calendar = ?;`,
-    [resourceId, calendarId]
+    [webhookId, resourceId, calendarId]
   );
 };
 
@@ -130,6 +131,33 @@ const insertUser = async (slackUserId) => {
   );
 };
 
+const getWebhookIdAndResourceId = async (slackUserId) => {
+  const [{ webhookId, resourceId }] = await appDataSource.query(
+    `
+    SELECT w.webhook_id webhookId, w.resource_id resourceId
+    FROM webhooks w
+    JOIN users u ON u.email = w.user_email
+    WHERE u.slack_user_id = ?`,
+    [slackUserId]
+  );
+
+  return { webhookId, resourceId };
+};
+
+const deleteWebhook = async (slackUserId) => {
+  await appDataSource.query(
+    `
+    UPDATE webhooks w
+    SET w.resource_id = NULL, w.webhook_id = NULL
+    WHERE w.user_email IN 
+      (SELECT u.email 
+      FROM users u 
+      WHERE u.slack_user_id = ?);
+    `,
+    [slackUserId]
+  );
+};
+
 module.exports = {
   createUser,
   userExist,
@@ -142,4 +170,6 @@ module.exports = {
   getUserDeleted,
   deleteUser,
   insertUser,
+  getWebhookIdAndResourceId,
+  deleteWebhook,
 };

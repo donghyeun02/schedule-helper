@@ -123,22 +123,29 @@ const afterLoginBlock = async (option) => {
       },
     },
     {
-      type: 'section',
-      text: {
-        type: 'mrkdwn',
-        text: '웹훅을 종료합니다.',
-      },
-      accessory: {
-        type: 'button',
-        text: {
-          type: 'plain_text',
-          text: '웹훅 종료',
-          emoji: true,
+      type: 'actions',
+      elements: [
+        {
+          type: 'button',
+          text: {
+            type: 'plain_text',
+            text: '웹훅 재등록',
+            emoji: true,
+          },
+          value: 're-register webhook',
+          action_id: 're-register_Webhook',
         },
-        value: 'delete webhook',
-        style: 'primary',
-        action_id: 'delete_webhook',
-      },
+        {
+          type: 'button',
+          text: {
+            type: 'plain_text',
+            text: '웹훅 종료',
+            emoji: true,
+          },
+          value: 'drop webhook',
+          action_id: 'delete_webhook',
+        },
+      ],
     },
     {
       type: 'divider',
@@ -336,7 +343,7 @@ const registerWebhook = async ({ ack, body, client }) => {
   }
 };
 
-const deleteWebhook = async ({ ack, body, client }) => {
+const dropWebhook = async ({ ack, body, client }) => {
   ack();
 
   const userId = body.user.id;
@@ -367,11 +374,20 @@ const deleteWebhook = async ({ ack, body, client }) => {
       },
     });
   } else if (!!webhookData.resourceId) {
-    await oauth2Client.credentials({ refresh_token: refreshToken });
+    await oauth2Client.setCredentials({ refresh_token: refreshToken });
 
-    await calendar.events.stop({
-      id: webhookData.webhookId,
-      resourceId: webhookData.resourceId,
+    const getAccessToken = await oauth2Client.getAccessToken();
+    const accessToken = getAccessToken.token;
+
+    await calendar.channels.stop({
+      resource: {
+        id: webhookData.webhookId,
+        resourceId: webhookData.resourceId,
+      },
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        Accept: `application/json`,
+      },
     });
 
     await deleteWebhook(userId);
@@ -413,6 +429,29 @@ const googleLogout = async ({ ack, body, client }) => {
   ack();
 
   const userId = body.user.id;
+  const webhookData = await getWebhookIdAndResourceId(userId);
+
+  if (!!webhookData.resourceId) {
+    const refreshToken = await getRefreshTokenByUserID(userId);
+
+    await oauth2Client.setCredentials({ refresh_token: refreshToken });
+
+    const getAccessToken = await oauth2Client.getAccessToken();
+    const accessToken = getAccessToken.token;
+
+    await calendar.channels.stop({
+      resource: {
+        id: webhookData.webhookId,
+        resourceId: webhookData.resourceId,
+      },
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        Accept: `application/json`,
+      },
+    });
+
+    await deleteWebhook(userId);
+  }
 
   await deleteUser(userId);
 
@@ -518,7 +557,7 @@ module.exports = {
   selectedChannel,
   selectedCalendar,
   registerWebhook,
-  deleteWebhook,
+  dropWebhook,
   registerReminder,
   googleLogout,
   getCalendarList,

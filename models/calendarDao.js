@@ -134,9 +134,10 @@ const insertUser = async (slackUserId) => {
 const getWebhookIdAndResourceId = async (slackUserId) => {
   const [{ webhookId, resourceId }] = await appDataSource.query(
     `
-    SELECT webhook_id webhookId, resource_id resourceId
-    FROM webhooks
-    WHERE slack_user_id = ?`,
+    SELECT w.webhook_id webhookId, w.resource_id resourceId
+    FROM webhooks w
+    JOIN users u ON u.email = w.user_email
+    WHERE u.slack_user_id = ?`,
     [slackUserId]
   );
 
@@ -146,9 +147,13 @@ const getWebhookIdAndResourceId = async (slackUserId) => {
 const deleteWebhook = async (slackUserId) => {
   await appDataSource.query(
     `
-    UPDATE webhooks
-    SET resource_id = NULL, webhook_id = NULL
-    WHERE slack_user_id = ?`,
+    UPDATE webhooks w
+    SET w.resource_id = NULL, w.webhook_id = NULL
+    WHERE w.user_email IN 
+      (SELECT u.email 
+      FROM users u 
+      WHERE u.slack_user_id = ?);
+    `,
     [slackUserId]
   );
 };

@@ -1,4 +1,3 @@
-const { App } = require('@slack/bolt');
 const { v4 } = require('uuid');
 const { google } = require('googleapis');
 const {
@@ -21,11 +20,6 @@ const {
 const { oauth2Client } = require('../utils/oauth2');
 
 const calendar = google.calendar('v3');
-
-const slackApp = new App({
-  signingSecret: process.env.SLACK_SECRET,
-  token: process.env.SLACK_BOT_TOKEN,
-});
 
 const beforeLoginBlock = async (slackUserId) => {
   const blocks = [
@@ -200,21 +194,10 @@ const appHomeOpened = async ({ event, client }) => {
   try {
     const slackUserId = event.user;
 
-    const ExistingUser = await userExist(slackUserId);
-    const isDeleted = await getUserDeleted(slackUserId);
+    const ExistingUser = parseInt(await userExist(slackUserId));
+    const isDeleted = parseInt(await getUserDeleted(slackUserId));
 
-    if (ExistingUser === '0' || (ExistingUser === '1' && isDeleted === '1')) {
-      const blocks = await beforeLoginBlock(slackUserId);
-
-      return await client.views.publish({
-        user_id: slackUserId,
-        view: {
-          type: 'home',
-          callback_id: 'home_view',
-          blocks: blocks,
-        },
-      });
-    } else if (ExistingUser === '1' && isDeleted === '0') {
+    if (!!ExistingUser && !isDeleted) {
       const option = await getCalendarList(slackUserId);
 
       const blocks = await afterLoginBlock(option);
@@ -228,6 +211,17 @@ const appHomeOpened = async ({ event, client }) => {
         },
       });
     }
+
+    const blocks = await beforeLoginBlock(slackUserId);
+
+    return await client.views.publish({
+      user_id: slackUserId,
+      view: {
+        type: 'home',
+        callback_id: 'home_view',
+        blocks: blocks,
+      },
+    });
   } catch (error) {
     console.error('Error:', error);
   }
@@ -551,7 +545,6 @@ const getCalendarList = async (slackUserId) => {
 };
 
 module.exports = {
-  slackApp,
   afterLoginBlock,
   appHomeOpened,
   selectedChannel,

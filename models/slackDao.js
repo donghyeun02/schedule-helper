@@ -87,6 +87,37 @@ const getSlackChannel = async (email) => {
   return slackChannel.slackChannel;
 };
 
+const saveSlackUser = async (token, workSpace, userId) => {
+  return await appDataSource.query(
+    `
+    INSERT INTO slacks(bot_token, work_space, user_id)
+    VALUES (?, ?, ?)`,
+    [token, workSpace, userId]
+  );
+};
+
+const getTokenInSlacks = async (userId) => {
+  const [botToken] = await appDataSource.query(
+    `
+    SELECT bot_token botToken
+    FROM slacks
+    WHERE user_id = ?`,
+    [userId]
+  );
+
+  return botToken.botToken;
+};
+
+const updateToken = async (token, userId) => {
+  return await appDataSource.query(
+    `
+    UPDATE users
+    SET refresh_token = ?
+    WHERE slack_user_id = ?`,
+    [token, userId]
+  );
+};
+
 module.exports = {
   updateReminderTime,
   updateSlackChannel,
@@ -95,4 +126,7 @@ module.exports = {
   getCalendarByuserId,
   getResourceIdByuserId,
   getSlackChannel,
+  saveSlackUser,
+  getTokenInSlacks,
+  updateToken,
 };

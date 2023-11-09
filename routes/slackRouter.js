@@ -11,4 +11,7 @@ router.post('/events', (req, res) => {
   slackService.handleEvent(req, res);
 });
 
+router.get('/redirect', (req, res) => {
+  slackService.appInstall(req, res);
+});
 module.exports = router;

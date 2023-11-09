@@ -68,7 +68,7 @@ const getRefreshTokenByEmail = async (email) => {
     `
     SELECT refresh_token refreshToken
     FROM users
-    WHERE email = ?`,
+    WHERE email = ? AND refresh_token IS NOT NULL;`,
     [email]
   );
 
@@ -100,7 +100,7 @@ const getEmailByReminderTime = async (time) => {
 };
 
 const getUserDeleted = async (slackUserId) => {
-  const isDeleted = await appDataSource.query(
+  const [isDeleted] = await appDataSource.query(
     `
     SELECT is_deleted isDeleted
     FROM users

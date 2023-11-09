@@ -8,14 +8,20 @@ const {
   registerReminder,
   googleLogout,
 } = require('../utils/slackHome');
+const { saveSlackUser, getTokenInSlacks } = require('../models/slackDao');
 
-const web = new WebClient(process.env.SLACK_BOT_TOKEN);
+const webClient = new WebClient();
 
 const handleEvent = async (req, res) => {
   const event = req.body.event;
 
+  const userId = event.user;
+
+  const botToken = await getTokenInSlacks(userId);
+  const web = new WebClient(botToken);
+
   if (event.type === 'app_home_opened') {
-    await appHomeOpened({
+    return await appHomeOpened({
       event: event,
       client: web,
     });
@@ -27,7 +33,11 @@ const handleEvent = async (req, res) => {
 const handleButton = async (req, res) => {
   const payload = JSON.parse(req.body.payload);
 
+  const userId = payload.user.id;
   const actionId = payload.actions[0].action_id;
+
+  const botToken = await getTokenInSlacks(userId);
+  const web = new WebClient(botToken);
 
   switch (actionId) {
     case 'selected_channel':
@@ -69,6 +79,32 @@ const handleButton = async (req, res) => {
       });
       break;
   }
+
+  return res.sendStatus(200);
+};
+
+const appInstall = async (req, res) => {
+  const code = req.query.code;
+
+  const clientId = process.env.SLACK_CLIENT_ID;
+  const clientSecret = process.env.SLACK_CLIENT_SECRET;
+
+  webClient.oauth.v2
+    .access({
+      client_id: clientId,
+      client_secret: clientSecret,
+      code: code,
+    })
+    .then((response) => {
+      const { access_token, team } = response;
+      console.log(response);
+      saveSlackUser(access_token, team.name, response.authed_user.id);
+
+      console.log('워크스페이스:', team);
+    })
+    .catch((error) => {
+      console.error('토큰 요청 오류:', error);
+    });
 
   return res.sendStatus(200);
 };
@@ -144,6 +180,7 @@ const sendReminderMessage = async (eventOpt) => {
 module.exports = {
   handleButton,
   handleEvent,
+  appInstall,
   sendSlackMessage,
   sendReminderMessage,
 };

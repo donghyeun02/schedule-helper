@@ -1,4 +1,5 @@
 const { google } = require('googleapis');
+const { WebClient } = require('@slack/web-api');
 const { oauth2Client } = require('../utils/oauth2');
 const { sendSlackMessage } = require('./slackService');
 const {
@@ -9,12 +10,12 @@ const {
   userExist,
   insertUser,
 } = require('../models/calendarDao');
-const { getSlackChannel } = require('../models/slackDao');
 const {
-  slackApp,
-  getCalendarList,
-  afterLoginBlock,
-} = require('../utils/slackHome');
+  getSlackChannel,
+  getTokenInSlacks,
+  updateToken,
+} = require('../models/slackDao');
+const { getCalendarList, afterLoginBlock } = require('../utils/slackHome');
 
 const calendar = google.calendar('v3');
 
@@ -41,6 +42,9 @@ const googleOAuth = async (req, res) => {
   try {
     const authCode = req.query.code;
     const slackUserId = JSON.parse(req.query.state);
+
+    const botToken = await getTokenInSlacks(slackUserId);
+    const web = new WebClient(botToken);
 
     const ExistingUser = await userExist(slackUserId);
 
@@ -70,15 +74,22 @@ const googleOAuth = async (req, res) => {
       const userEmail = userInfo.data.email;
 
       await createUser(userEmail, refreshToken, slackUserId);
+
+      if (!refreshToken) {
+        const token = await getRefreshTokenByEmail(userEmail);
+        await updateToken(token, slackUserId);
+      }
+
+      res.status(200).json({ message: '로그인이 완료되었습니다.' });
     } else if (ExistingUser === '1') {
       await insertUser(slackUserId);
+
+      res.status(200).json({ message: '로그인이 완료되었습니다.' });
     }
-
     const option = await getCalendarList(slackUserId);
-
     const blocks = await afterLoginBlock(option);
 
-    await slackApp.client.views.publish({
+    return await web.views.publish({
       user_id: slackUserId,
       view: {
         type: 'home',
@@ -86,8 +97,6 @@ const googleOAuth = async (req, res) => {
         blocks: blocks,
       },
     });
-
-    return res.status(200).json({ message: 'OK' });
   } catch (error) {
     res.status(500).json({ message: error.stack });
   }
@@ -111,9 +120,9 @@ const webhookEventHandler = async (req, res) => {
       const eventOpt = {
         slackChannel: channelId,
         color: 'FFFF00',
-        title: '웹훅 등록 알림',
-        summary: '웹훅 등록',
-        text: `웹훅이 등록되었습니다. / 웹훅 아이디 : ${resourceId}`,
+        title: '캘린더 구독 알림',
+        summary: '캘린더 구독',
+        text: `캘린더 구독이 시작되었습니다. / 구독 아이디 : ${resourceId}`,
       };
 
       await sendSlackMessage(eventOpt);

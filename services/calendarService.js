@@ -14,6 +14,7 @@ const {
   getSlackChannel,
   getTokenInSlacks,
   updateToken,
+  getTeamIdByWebhookId,
 } = require('../models/slackDao');
 const { getCalendarList, afterLoginBlock } = require('../utils/slackHome');
 
@@ -21,7 +22,10 @@ const calendar = google.calendar('v3');
 
 // auth code를 얻기 위한 구글 로그인 과정
 const googleLogin = async (req, res) => {
-  const slackUserId = JSON.stringify(req.query.slackUserId);
+  const slackUserId = req.query.slackUserId;
+  const slackTeamId = req.query.slackTeamId;
+
+  const state = JSON.stringify({ slackUserId, slackTeamId });
 
   const oauth2Url = oauth2Client.generateAuthUrl({
     access_type: 'offline',
@@ -31,7 +35,7 @@ const googleLogin = async (req, res) => {
       'https://www.googleapis.com/auth/userinfo.email',
     ],
     response_type: 'code',
-    state: slackUserId,
+    state: state,
   });
 
   res.redirect(oauth2Url);
@@ -41,9 +45,13 @@ const googleLogin = async (req, res) => {
 const googleOAuth = async (req, res) => {
   try {
     const authCode = req.query.code;
-    const slackUserId = JSON.parse(req.query.state);
 
-    const botToken = await getTokenInSlacks(slackUserId);
+    const state = JSON.parse(req.query.state);
+
+    const slackUserId = state.slackUserId;
+    const slackTeamId = state.slackTeamId;
+
+    const botToken = await getTokenInSlacks(slackTeamId);
     const web = new WebClient(botToken);
 
     const ExistingUser = await userExist(slackUserId);
@@ -73,7 +81,7 @@ const googleOAuth = async (req, res) => {
 
       const userEmail = userInfo.data.email;
 
-      await createUser(userEmail, refreshToken, slackUserId);
+      await createUser(userEmail, refreshToken, slackUserId, slackTeamId);
 
       if (!refreshToken) {
         const token = await getRefreshTokenByEmail(userEmail);
@@ -109,12 +117,18 @@ const webhookEventHandler = async (req, res) => {
 
     const resourceId = eventData['x-goog-resource-id'];
     const resourceState = eventData['x-goog-resource-state'];
+    const webhookId = eventData['x-goog-channel-id'];
 
     const userEmail = await getUserEmailByResourceId(resourceId);
 
+    const channelId = await getSlackChannel(webhookId);
+    const calendarId = await getCalendarId(webhookId);
+    const slackTeamId = await getTeamIdByWebhookId(webhookId);
+
     const refreshToken = await getRefreshTokenByEmail(userEmail);
-    const channelId = await getSlackChannel(userEmail);
-    const calendarId = await getCalendarId(userEmail);
+
+    const botToken = await getTokenInSlacks(slackTeamId);
+    const web = new WebClient(botToken);
 
     if (resourceState === 'sync') {
       const eventOpt = {
@@ -122,10 +136,10 @@ const webhookEventHandler = async (req, res) => {
         color: 'FFFF00',
         title: '캘린더 구독 알림',
         summary: '캘린더 구독',
-        text: `캘린더 구독이 시작되었습니다. / 구독 아이디 : ${resourceId}`,
+        text: `캘린더 구독이 시작되었습니다.`,
       };
 
-      await sendSlackMessage(eventOpt);
+      await sendSlackMessage(eventOpt, web);
     } else if (resourceState === 'exists') {
       const event = await getCalendarEvent(refreshToken, calendarId);
 
@@ -154,7 +168,7 @@ const webhookEventHandler = async (req, res) => {
               text: `일정 시작 : ${startDateTime} \n일정 종료 : ${endDateTime}`,
             };
 
-            await sendSlackMessage(eventOpt);
+            await sendSlackMessage(eventOpt, web);
           } else {
             const eventOpt = {
               slackChannel: channelId,
@@ -164,7 +178,7 @@ const webhookEventHandler = async (req, res) => {
               text: `일정 시작 : ${startDateTime} \n일정 종료 : ${endDateTime}`,
             };
 
-            await sendSlackMessage(eventOpt);
+            await sendSlackMessage(eventOpt, web);
           }
           break;
         case 'cancelled':
@@ -176,7 +190,7 @@ const webhookEventHandler = async (req, res) => {
             text: `일정 시작 : ${startDateTime} \n일정 종료 : ${endDateTime}`,
           };
 
-          await sendSlackMessage(eventOpt);
+          await sendSlackMessage(eventOpt, web);
           break;
       }
     }

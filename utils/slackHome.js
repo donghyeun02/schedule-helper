@@ -21,7 +21,7 @@ const { oauth2Client } = require('../utils/oauth2');
 
 const calendar = google.calendar('v3');
 
-const beforeLoginBlock = async (slackUserId) => {
+const beforeLoginBlock = async (slackUserId, slackTeamId) => {
   const blocks = [
     {
       type: 'header',
@@ -41,7 +41,7 @@ const beforeLoginBlock = async (slackUserId) => {
             emoji: true,
           },
           value: 'google login',
-          url: `https://donghyeun02.link/?slackUserId=${slackUserId}`,
+          url: `https://donghyeun02.link/?slackUserId=${slackUserId}&slackTeamId=${slackTeamId}`,
           style: 'primary',
           action_id: 'google_login',
         },
@@ -190,29 +190,33 @@ const afterLoginBlock = async (option) => {
   return blocks;
 };
 
-const appHomeOpened = async ({ event, client }) => {
+const appHomeOpened = async ({ body, client }) => {
   try {
-    const slackUserId = event.user;
+    const slackUserId = body.event.user;
+    const slackTeamId = body.team_id;
 
     const ExistingUser = parseInt(await userExist(slackUserId));
-    const isDeleted = parseInt(await getUserDeleted(slackUserId));
 
-    if (!!ExistingUser && !isDeleted) {
-      const option = await getCalendarList(slackUserId);
+    if (!!ExistingUser) {
+      const isDeleted = parseInt(await getUserDeleted(slackUserId));
 
-      const blocks = await afterLoginBlock(option);
+      if (!isDeleted) {
+        const option = await getCalendarList(slackUserId);
 
-      return await client.views.publish({
-        user_id: slackUserId,
-        view: {
-          type: 'home',
-          callback_id: 'home_view',
-          blocks: blocks,
-        },
-      });
+        const blocks = await afterLoginBlock(option);
+
+        return await client.views.publish({
+          user_id: slackUserId,
+          view: {
+            type: 'home',
+            callback_id: 'home_view',
+            blocks: blocks,
+          },
+        });
+      }
     }
 
-    const blocks = await beforeLoginBlock(slackUserId);
+    const blocks = await beforeLoginBlock(slackUserId, slackTeamId);
 
     return await client.views.publish({
       user_id: slackUserId,
@@ -423,6 +427,8 @@ const googleLogout = async ({ ack, body, client }) => {
   ack();
 
   const userId = body.user.id;
+  const teamId = body.user.team_id;
+
   const webhookData = await getWebhookIdAndResourceId(userId);
 
   if (!!webhookData.resourceId) {
@@ -449,7 +455,7 @@ const googleLogout = async ({ ack, body, client }) => {
 
   await deleteUser(userId);
 
-  const blocks = await beforeLoginBlock(userId);
+  const blocks = await beforeLoginBlock(userId, teamId);
 
   return await client.views.publish({
     user_id: userId,
@@ -492,7 +498,7 @@ const calendarWebhook = async (userId, calendarId) => {
 
     const resourceId = data.resourceId;
 
-    await updateWebHook(webhookId, resourceId, calendarId);
+    await updateWebHook(webhookId, resourceId, userId);
 
     console.log('Google Calendar Webhook이 설정되었습니다. : ', data);
   } catch (error) {

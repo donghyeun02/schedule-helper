@@ -1,13 +1,15 @@
 const schedule = require('node-schedule');
 const { google } = require('googleapis');
+const { client } = require('../utils/webClient');
 
 const { oauth2Client } = require('./oauth2');
 const {
-  getEmailByReminderTime,
+  getUserByReminderTime,
   getCalendarId,
-  getRefreshTokenByEmail,
+  getRefreshTokenByUserID,
+  getWebhookIdAndResourceId,
 } = require('../models/calendarDao');
-const { getSlackChannel } = require('../models/slackDao');
+const { getSlackChannel, getTeamIdByWebhookId } = require('../models/slackDao');
 const {
   sendSlackMessage,
   sendReminderMessage,
@@ -27,17 +29,21 @@ const calendarReminder = schedule.scheduleJob('0 * * * *', async () => {
 
   const currentHour = formatCurrentHour(koreaDate);
 
-  const users = await getEmailByReminderTime(currentHour);
+  const users = await getUserByReminderTime(currentHour);
 
   for (const user of users) {
-    const email = user.email;
+    const slackUserId = user.slackUserId;
 
-    const refreshToken = await getRefreshTokenByEmail(email);
+    const refreshToken = await getRefreshTokenByUserID(slackUserId);
 
     oauth2Client.setCredentials({ refresh_token: refreshToken });
 
-    const calendarId = await getCalendarId(email);
-    const channelId = await getSlackChannel(email);
+    const webhookId = await getWebhookIdAndResourceId(slackUserId);
+    const channelId = await getSlackChannel(webhookId.webhookId);
+    const calendarId = await getCalendarId(webhookId.webhookId);
+    const slackTeamId = await getTeamIdByWebhookId(webhookId.webhookId);
+
+    const web = await client(slackTeamId);
 
     const startOfDay = new Date(currentDate);
     const endOfDay = new Date(currentDate);
@@ -69,7 +75,7 @@ const calendarReminder = schedule.scheduleJob('0 * * * *', async () => {
         text: `당일 일정이 없습니다 !`,
       };
 
-      await sendSlackMessage(eventOpt);
+      await sendSlackMessage(eventOpt, web);
     } else {
       const eventAttachments = events
         .map((event) => {
@@ -111,7 +117,7 @@ const calendarReminder = schedule.scheduleJob('0 * * * *', async () => {
         attachments: eventAttachments,
       };
 
-      await sendReminderMessage(eventOpt);
+      await sendReminderMessage(eventOpt, web);
     }
   }
 });

@@ -147,14 +147,12 @@ const webhookEventHandler = async (req, res) => {
 
       const createdTime = await getParseTime(event.created);
       const updatedTime = await getParseTime(event.updated);
-      const startDateTime = await formatDateTime(
-        event.start.dateTime,
-        event.start.timeZone
-      );
-      const endDateTime = await formatDateTime(
-        event.end.dateTime,
-        event.end.timeZone
-      );
+      const startDateTime =
+        (await formatDateTime(event.start.dateTime, event.start.timeZone)) ||
+        event.start.date;
+      const endDateTime =
+        (await formatDateTime(event.end.dateTime, event.end.timeZone)) ||
+        event.end.date;
 
       switch (eventStatus) {
         case 'confirmed':

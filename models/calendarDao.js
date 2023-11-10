@@ -87,10 +87,10 @@ const getRefreshTokenByUserID = async (slackUserId) => {
   return token.refreshToken;
 };
 
-const getEmailByReminderTime = async (time) => {
+const getUserByReminderTime = async (time) => {
   const user = await appDataSource.query(
     `
-    SELECT email
+    SELECT slack_user_id slackUserId
     FROM users
     WHERE reminder_time = ?`,
     [time]
@@ -162,7 +162,7 @@ module.exports = {
   getUserEmailByResourceId,
   getRefreshTokenByEmail,
   getRefreshTokenByUserID,
-  getEmailByReminderTime,
+  getUserByReminderTime,
   getUserDeleted,
   deleteUser,
   insertUser,

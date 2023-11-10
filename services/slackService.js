@@ -8,7 +8,9 @@ const {
   registerReminder,
   googleLogout,
 } = require('../utils/slackHome');
-const { saveSlackUser, getTokenInSlacks } = require('../models/slackDao');
+const { client } = require('../utils/webClient');
+
+const { saveSlackUser } = require('../models/slackDao');
 
 const webClient = new WebClient();
 
@@ -16,8 +18,7 @@ const handleEvent = async (req, res) => {
   const body = req.body;
   const teamId = body.team_id;
 
-  const botToken = await getTokenInSlacks(teamId);
-  const web = new WebClient(botToken);
+  const web = await client(teamId);
 
   if (body.event.type === 'app_home_opened') {
     return await appHomeOpened({
@@ -34,8 +35,7 @@ const handleButton = async (req, res) => {
   const teamId = payload.user.team_id;
   const actionId = payload.actions[0].action_id;
 
-  const botToken = await getTokenInSlacks(teamId);
-  const web = new WebClient(botToken);
+  const web = await client(teamId);
 
   switch (actionId) {
     case 'selected_channel':

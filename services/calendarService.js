@@ -1,6 +1,9 @@
 const { google } = require('googleapis');
-const { WebClient } = require('@slack/web-api');
+
 const { oauth2Client } = require('../utils/oauth2');
+const { getCalendarList, afterLoginBlock } = require('../utils/slackHome');
+const { client } = require('../utils/webClient');
+
 const { sendSlackMessage } = require('./slackService');
 const {
   createUser,
@@ -12,11 +15,9 @@ const {
 } = require('../models/calendarDao');
 const {
   getSlackChannel,
-  getTokenInSlacks,
   updateToken,
   getTeamIdByWebhookId,
 } = require('../models/slackDao');
-const { getCalendarList, afterLoginBlock } = require('../utils/slackHome');
 
 const calendar = google.calendar('v3');
 
@@ -51,8 +52,7 @@ const googleOAuth = async (req, res) => {
     const slackUserId = state.slackUserId;
     const slackTeamId = state.slackTeamId;
 
-    const botToken = await getTokenInSlacks(slackTeamId);
-    const web = new WebClient(botToken);
+    const web = await client(slackTeamId);
 
     const ExistingUser = await userExist(slackUserId);
 
@@ -127,8 +127,7 @@ const webhookEventHandler = async (req, res) => {
 
     const refreshToken = await getRefreshTokenByEmail(userEmail);
 
-    const botToken = await getTokenInSlacks(slackTeamId);
-    const web = new WebClient(botToken);
+    const web = await client(slackTeamId);
 
     if (resourceState === 'sync') {
       const eventOpt = {

@@ -21,7 +21,7 @@ const {
 
 const calendar = google.calendar('v3');
 
-const calendarReminder = schedule.scheduleJob('* * * * *', async () => {
+const calendarReminder = schedule.scheduleJob('0 * * * *', async () => {
   console.log('Calendar Reminder 실행');
 
   const currentDate = new Date();

@@ -1,6 +1,6 @@
 const schedule = require('node-schedule');
 const { google } = require('googleapis');
-const { WebClient } = require('@slack/web-api');
+const { client } = require('../utils/webClient');
 
 const { oauth2Client } = require('./oauth2');
 const {
@@ -9,11 +9,7 @@ const {
   getRefreshTokenByUserID,
   getWebhookIdAndResourceId,
 } = require('../models/calendarDao');
-const {
-  getSlackChannel,
-  getTeamIdByWebhookId,
-  getTokenInSlacks,
-} = require('../models/slackDao');
+const { getSlackChannel, getTeamIdByWebhookId } = require('../models/slackDao');
 const {
   sendSlackMessage,
   sendReminderMessage,
@@ -47,8 +43,7 @@ const calendarReminder = schedule.scheduleJob('0 * * * *', async () => {
     const calendarId = await getCalendarId(webhookId.webhookId);
     const slackTeamId = await getTeamIdByWebhookId(webhookId.webhookId);
 
-    const botToken = await getTokenInSlacks(slackTeamId);
-    const web = new WebClient(botToken);
+    const web = await client(slackTeamId);
 
     const startOfDay = new Date(currentDate);
     const endOfDay = new Date(currentDate);

@@ -13,16 +13,15 @@ const { saveSlackUser, getTokenInSlacks } = require('../models/slackDao');
 const webClient = new WebClient();
 
 const handleEvent = async (req, res) => {
-  const event = req.body.event;
+  const body = req.body;
+  const teamId = body.team_id;
 
-  const userId = event.user;
-
-  const botToken = await getTokenInSlacks(userId);
+  const botToken = await getTokenInSlacks(teamId);
   const web = new WebClient(botToken);
 
-  if (event.type === 'app_home_opened') {
+  if (body.event.type === 'app_home_opened') {
     return await appHomeOpened({
-      event: event,
+      body: body,
       client: web,
     });
   }
@@ -32,11 +31,10 @@ const handleEvent = async (req, res) => {
 
 const handleButton = async (req, res) => {
   const payload = JSON.parse(req.body.payload);
-
-  const userId = payload.user.id;
+  const teamId = payload.user.team_id;
   const actionId = payload.actions[0].action_id;
 
-  const botToken = await getTokenInSlacks(userId);
+  const botToken = await getTokenInSlacks(teamId);
   const web = new WebClient(botToken);
 
   switch (actionId) {
@@ -98,7 +96,7 @@ const appInstall = async (req, res) => {
     .then((response) => {
       const { access_token, team } = response;
       console.log(response);
-      saveSlackUser(access_token, team.name, response.authed_user.id);
+      saveSlackUser(access_token, team.id, team.name, response.authed_user.id);
 
       console.log('워크스페이스:', team);
     })
@@ -109,7 +107,7 @@ const appInstall = async (req, res) => {
   return res.sendStatus(200);
 };
 
-const sendSlackMessage = async (eventOpt) => {
+const sendSlackMessage = async (eventOpt, web) => {
   try {
     const option = {
       channel: eventOpt.slackChannel,
@@ -154,7 +152,7 @@ const sendSlackMessage = async (eventOpt) => {
   }
 };
 
-const sendReminderMessage = async (eventOpt) => {
+const sendReminderMessage = async (eventOpt, web) => {
   try {
     const option = {
       channel: eventOpt.slackChannel,

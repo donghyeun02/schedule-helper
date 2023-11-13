@@ -4,6 +4,7 @@ const {
   selectedChannel,
   selectedCalendar,
   registerWebhook,
+  reRegisterWebhook,
   dropWebhook,
   registerReminder,
   googleLogout,
@@ -57,12 +58,20 @@ const handleButton = async (req, res) => {
         client: web,
       });
       break;
+    case 're-register_Webhook':
+      reRegisterWebhook({
+        ack: () => {},
+        body: payload,
+        client: web,
+      });
+      break;
     case 'delete_webhook':
       dropWebhook({
         ack: () => {},
         body: payload,
         client: web,
       });
+      break;
     case 'time':
       registerReminder({
         ack: () => {},

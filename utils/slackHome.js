@@ -108,7 +108,7 @@ const afterLoginBlock = async (option) => {
         type: 'button',
         text: {
           type: 'plain_text',
-          text: '웹훅 등록하기',
+          text: '캘린더 구독하기',
           emoji: true,
         },
         value: 'webhook',
@@ -123,7 +123,7 @@ const afterLoginBlock = async (option) => {
           type: 'button',
           text: {
             type: 'plain_text',
-            text: '웹훅 재등록',
+            text: '캘린더 구독 재등록',
             emoji: true,
           },
           value: 're-register webhook',
@@ -133,7 +133,7 @@ const afterLoginBlock = async (option) => {
           type: 'button',
           text: {
             type: 'plain_text',
-            text: '웹훅 종료',
+            text: '구독 종료',
             emoji: true,
           },
           value: 'drop webhook',
@@ -321,7 +321,7 @@ const registerWebhook = async ({ ack, body, client }) => {
           callback_id: 'success_modal',
           title: {
             type: 'plain_text',
-            text: '웹훅 등록',
+            text: '캘린더 구독',
           },
           blocks: [
             {
@@ -338,6 +338,63 @@ const registerWebhook = async ({ ack, body, client }) => {
     } catch (error) {
       console.error('웹훅 등록 오류 :', error);
     }
+  }
+};
+
+const reRegisterWebhook = async ({ ack, body, client }) => {
+  ack();
+
+  const userId = body.user.id;
+
+  const webhookData = await getWebhookIdAndResourceId(userId);
+
+  if (!webhookData.resourceId) {
+    await client.views.open({
+      trigger_id: body.trigger_id,
+      view: {
+        type: 'modal',
+        callback_id: 'success_modal',
+        title: {
+          type: 'plain_text',
+          text: '웹훅 종료 오류',
+        },
+        blocks: [
+          {
+            type: 'section',
+            block_id: 'error_message',
+            text: {
+              type: 'mrkdwn',
+              text: '구독된 캘린더가 없습니다.',
+            },
+          },
+        ],
+      },
+    });
+  } else if (!!webhookData.resourceId) {
+    const calendarId = await getCalendarByuserId(userId);
+    const refreshToken = await getRefreshTokenByUserID(userId);
+
+    await oauth2Client.setCredentials({ refresh_token: refreshToken });
+
+    const getAccessToken = await oauth2Client.getAccessToken();
+    const accessToken = getAccessToken.token;
+
+    try {
+      await calendar.channels.stop({
+        resource: {
+          id: webhookData.webhookId,
+          resourceId: webhookData.resourceId,
+        },
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          Accept: `application/json`,
+        },
+      });
+    } catch (error) {
+      console.error('웹훅 재등록 오류 (웹훅 삭제) :', error);
+    }
+
+    await calendarWebhook(userId, calendarId);
   }
 };
 
@@ -556,6 +613,7 @@ module.exports = {
   selectedChannel,
   selectedCalendar,
   registerWebhook,
+  reRegisterWebhook,
   dropWebhook,
   registerReminder,
   googleLogout,

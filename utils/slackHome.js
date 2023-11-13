@@ -484,7 +484,7 @@ const calendarWebhook = async (userId, calendarId) => {
         type: 'web_hook',
         address: 'https://donghyeun02.link/calendar-webhook',
         params: {
-          ttl: 300,
+          ttl: 2592000,
         },
       },
       calendarId: calendarId,

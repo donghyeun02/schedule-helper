@@ -3,6 +3,7 @@ const { google } = require('googleapis');
 const { oauth2Client } = require('../utils/oauth2');
 const { getCalendarList, afterLoginBlock } = require('../utils/slackHome');
 const { client } = require('../utils/webClient');
+const { getRecurrenceEvent } = require('../utils/recurrenceEvent');
 
 const { sendSlackMessage } = require('./slackService');
 const {
@@ -144,6 +145,7 @@ const webhookEventHandler = async (req, res) => {
 
       const eventStatus = event.status;
       const eventSummary = event.summary;
+      const recurrence = event.recurrence;
 
       const createdTime = await getParseTime(event.created);
       const updatedTime = await getParseTime(event.updated);
@@ -154,41 +156,82 @@ const webhookEventHandler = async (req, res) => {
         (await formatDateTime(event.end.dateTime, event.end.timeZone)) ||
         event.end.date;
 
-      switch (eventStatus) {
-        case 'confirmed':
-          if (createdTime === updatedTime) {
+      if (!!recurrence) {
+        switch (eventStatus) {
+          case 'confirmed':
+            if (createdTime === updatedTime) {
+              const eventOpt = {
+                slackChannel: channelId,
+                color: '00FF00',
+                title: '🗓️ 일정 등록 알림',
+                summary: eventSummary,
+                text: `일정 시작 : ${startDateTime} \n일정 종료 : ${endDateTime}`,
+              };
+
+              await sendSlackMessage(eventOpt, web);
+            } else {
+              const eventOpt = {
+                slackChannel: channelId,
+                color: '0000FF',
+                title: '🗓️ 일정 변경 알림',
+                summary: eventSummary,
+                text: `일정 시작 : ${startDateTime} \n일정 종료 : ${endDateTime}`,
+              };
+
+              await sendSlackMessage(eventOpt, web);
+            }
+            break;
+          case 'cancelled':
             const eventOpt = {
               slackChannel: channelId,
-              color: '00FF00',
-              title: '일정 등록 알림',
+              color: 'FF0000',
+              title: '🗓️ 일정 삭제 알림',
               summary: eventSummary,
               text: `일정 시작 : ${startDateTime} \n일정 종료 : ${endDateTime}`,
             };
 
             await sendSlackMessage(eventOpt, web);
-          } else {
+            break;
+        }
+      } else if (!recurrence) {
+        const recurrenceEvent = await getRecurrenceEvent(recurrence);
+
+        switch (eventStatus) {
+          case 'confirmed':
+            if (createdTime === updatedTime) {
+              const eventOpt = {
+                slackChannel: channelId,
+                color: '00FF00',
+                title: `🗓️ 일정 등록 알림 (${recurrenceEvent})`,
+                summary: eventSummary,
+                text: `일정 시작 : ${startDateTime} \n일정 종료 : ${endDateTime}`,
+              };
+
+              await sendSlackMessage(eventOpt, web);
+            } else {
+              const eventOpt = {
+                slackChannel: channelId,
+                color: '0000FF',
+                title: `🗓️ 일정 변경 알림 (${recurrenceEvent})`,
+                summary: eventSummary,
+                text: `일정 시작 : ${startDateTime} \n일정 종료 : ${endDateTime}`,
+              };
+
+              await sendSlackMessage(eventOpt, web);
+            }
+            break;
+          case 'cancelled':
             const eventOpt = {
               slackChannel: channelId,
-              color: '0000FF',
-              title: '일정 변경 알림',
+              color: 'FF0000',
+              title: `🗓️ 일정 삭제 알림 (${recurrenceEvent})`,
               summary: eventSummary,
               text: `일정 시작 : ${startDateTime} \n일정 종료 : ${endDateTime}`,
             };
 
             await sendSlackMessage(eventOpt, web);
-          }
-          break;
-        case 'cancelled':
-          const eventOpt = {
-            slackChannel: channelId,
-            color: 'FF0000',
-            title: '일정 삭제 알림',
-            summary: eventSummary,
-            text: `일정 시작 : ${startDateTime} \n일정 종료 : ${endDateTime}`,
-          };
-
-          await sendSlackMessage(eventOpt, web);
-          break;
+            break;
+        }
       }
     }
 

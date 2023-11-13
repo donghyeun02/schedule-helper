@@ -133,7 +133,7 @@ const webhookEventHandler = async (req, res) => {
     if (resourceState === 'sync') {
       const eventOpt = {
         slackChannel: channelId,
-        color: 'FFFF00',
+        color: 'F0F00E',
         title: '캘린더 구독 알림',
         summary: '캘린더 구독',
         text: `캘린더 구독이 시작되었습니다.`,
@@ -150,19 +150,19 @@ const webhookEventHandler = async (req, res) => {
       const createdTime = await getParseTime(event.created);
       const updatedTime = await getParseTime(event.updated);
       const startDateTime =
-        (await formatDateTime(event.start.dateTime, event.start.timeZone)) ||
-        event.start.date;
+        event.start.date ||
+        (await formatDateTime(event.start.dateTime, event.start.timeZone));
       const endDateTime =
-        (await formatDateTime(event.end.dateTime, event.end.timeZone)) ||
-        event.end.date;
+        event.end.date ||
+        (await formatDateTime(event.end.dateTime, event.end.timeZone));
 
-      if (!!recurrence) {
+      if (!recurrence) {
         switch (eventStatus) {
           case 'confirmed':
             if (createdTime === updatedTime) {
               const eventOpt = {
                 slackChannel: channelId,
-                color: '00FF00',
+                color: '2FA86B',
                 title: '🗓️ 일정 등록 알림',
                 summary: eventSummary,
                 text: `일정 시작 : ${startDateTime} \n일정 종료 : ${endDateTime}`,
@@ -172,7 +172,7 @@ const webhookEventHandler = async (req, res) => {
             } else {
               const eventOpt = {
                 slackChannel: channelId,
-                color: '0000FF',
+                color: '1717E8',
                 title: '🗓️ 일정 변경 알림',
                 summary: eventSummary,
                 text: `일정 시작 : ${startDateTime} \n일정 종료 : ${endDateTime}`,
@@ -184,7 +184,7 @@ const webhookEventHandler = async (req, res) => {
           case 'cancelled':
             const eventOpt = {
               slackChannel: channelId,
-              color: 'FF0000',
+              color: 'DB2525',
               title: '🗓️ 일정 삭제 알림',
               summary: eventSummary,
               text: `일정 시작 : ${startDateTime} \n일정 종료 : ${endDateTime}`,
@@ -193,7 +193,7 @@ const webhookEventHandler = async (req, res) => {
             await sendSlackMessage(eventOpt, web);
             break;
         }
-      } else if (!recurrence) {
+      } else if (!!recurrence) {
         const recurrenceEvent = await getRecurrenceEvent(recurrence);
 
         switch (eventStatus) {
@@ -201,7 +201,7 @@ const webhookEventHandler = async (req, res) => {
             if (createdTime === updatedTime) {
               const eventOpt = {
                 slackChannel: channelId,
-                color: '00FF00',
+                color: '2FA86B',
                 title: `🗓️ 일정 등록 알림 (${recurrenceEvent})`,
                 summary: eventSummary,
                 text: `일정 시작 : ${startDateTime} \n일정 종료 : ${endDateTime}`,
@@ -211,7 +211,7 @@ const webhookEventHandler = async (req, res) => {
             } else {
               const eventOpt = {
                 slackChannel: channelId,
-                color: '0000FF',
+                color: '1717E8',
                 title: `🗓️ 일정 변경 알림 (${recurrenceEvent})`,
                 summary: eventSummary,
                 text: `일정 시작 : ${startDateTime} \n일정 종료 : ${endDateTime}`,
@@ -223,7 +223,7 @@ const webhookEventHandler = async (req, res) => {
           case 'cancelled':
             const eventOpt = {
               slackChannel: channelId,
-              color: 'FF0000',
+              color: 'DB2525',
               title: `🗓️ 일정 삭제 알림 (${recurrenceEvent})`,
               summary: eventSummary,
               text: `일정 시작 : ${startDateTime} \n일정 종료 : ${endDateTime}`,

@@ -1,12 +1,12 @@
 const { WebClient } = require('@slack/web-api');
 
-const { getWorkSpace } = require('../models/slackDao');
+const { slackDao } = require('../models');
 
 const sendErrorMessageToServer = async (teamId, errorMessage) => {
   const web = new WebClient(process.env.ERROR_TOKEN);
 
   const errorChannel = process.env.ERROR_CHANNEL;
-  const workSpace = await getWorkSpace(teamId);
+  const workSpace = await slackDao.getWorkSpace(teamId);
 
   try {
     const result = await web.chat.postMessage({

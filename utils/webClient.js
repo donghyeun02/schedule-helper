@@ -1,8 +1,8 @@
 const { WebClient } = require('@slack/web-api');
-const { getTokenInSlacks } = require('../models/slackDao');
+const { slackDao } = require('../models');
 
 const client = async (slackTeamId) => {
-  const botToken = await getTokenInSlacks(slackTeamId);
+  const botToken = await slackDao.getTokenInSlacks(slackTeamId);
 
   return new WebClient(botToken);
 };

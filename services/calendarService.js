@@ -1,24 +1,12 @@
 const { google } = require('googleapis');
 
+const { slackDao, calendarDao } = require('../models');
+
+const { sendSlackMessage } = require('../services/slackService');
 const { oauth2Client } = require('../utils/oauth2');
 const { getCalendarList, afterLoginBlock } = require('../utils/slackHome');
 const { client } = require('../utils/webClient');
 const { getRecurrenceEvent } = require('../utils/recurrenceEvent');
-
-const { sendSlackMessage } = require('./slackService');
-const {
-  createUser,
-  getUserEmailByResourceId,
-  getRefreshTokenByEmail,
-  getCalendarId,
-  userExist,
-  insertUser,
-} = require('../models/calendarDao');
-const {
-  getSlackChannel,
-  updateToken,
-  getTeamIdByWebhookId,
-} = require('../models/slackDao');
 
 const calendar = google.calendar('v3');
 
@@ -55,7 +43,7 @@ const googleOAuth = async (req, res) => {
 
     const web = await client(slackTeamId);
 
-    const ExistingUser = await userExist(slackUserId);
+    const ExistingUser = await calendarDao.userExist(slackUserId);
 
     if (ExistingUser === '0') {
       const getToken = await oauth2Client.getToken({
@@ -82,16 +70,21 @@ const googleOAuth = async (req, res) => {
 
       const userEmail = userInfo.data.email;
 
-      await createUser(userEmail, refreshToken, slackUserId, slackTeamId);
+      await calendarDao.createUser(
+        userEmail,
+        refreshToken,
+        slackUserId,
+        slackTeamId
+      );
 
       if (!refreshToken) {
-        const token = await getRefreshTokenByEmail(userEmail);
-        await updateToken(token, slackUserId);
+        const token = await calendarDao.getRefreshTokenByEmail(userEmail);
+        await slackDao.updateToken(token, slackUserId);
       }
 
       res.status(200).json({ message: '로그인이 완료되었습니다.' });
     } else if (ExistingUser === '1') {
-      await insertUser(slackUserId);
+      await calendarDao.insertUser(slackUserId);
 
       res.status(200).json({ message: '로그인이 완료되었습니다.' });
     }
@@ -120,13 +113,13 @@ const webhookEventHandler = async (req, res) => {
     const resourceState = eventData['x-goog-resource-state'];
     const webhookId = eventData['x-goog-channel-id'];
 
-    const userEmail = await getUserEmailByResourceId(resourceId);
+    const userEmail = await calendarDao.getUserEmailByResourceId(resourceId);
 
-    const channelId = await getSlackChannel(webhookId);
-    const calendarId = await getCalendarId(webhookId);
-    const slackTeamId = await getTeamIdByWebhookId(webhookId);
+    const channelId = await slackDao.getSlackChannel(webhookId);
+    const calendarId = await calendarDao.getCalendarId(webhookId);
+    const slackTeamId = await slackDao.getTeamIdByWebhookId(webhookId);
 
-    const refreshToken = await getRefreshTokenByEmail(userEmail);
+    const refreshToken = await calendarDao.getRefreshTokenByEmail(userEmail);
 
     const web = await client(slackTeamId);
 

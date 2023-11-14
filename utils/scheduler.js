@@ -3,19 +3,9 @@ const { google } = require('googleapis');
 const { client } = require('../utils/webClient');
 
 const { oauth2Client } = require('./oauth2');
-const {
-  getUserByReminderTime,
-  getRefreshTokenByUserID,
-} = require('../models/calendarDao');
-const {
-  getSlackChannelByuserId,
-  getCalendarByuserId,
-  getTeamIdByUserId,
-} = require('../models/slackDao');
-const {
-  sendSlackMessage,
-  sendReminderMessage,
-} = require('../services/slackService');
+const { slackDao, calendarDao } = require('../models');
+
+const { slackService } = require('../services');
 
 const calendar = google.calendar('v3');
 
@@ -31,18 +21,18 @@ const calendarReminder = schedule.scheduleJob('0 * * * *', async () => {
 
   const currentHour = formatCurrentHour(koreaDate);
 
-  const users = await getUserByReminderTime(currentHour);
+  const users = await calendarDao.getUserByReminderTime(currentHour);
 
   for (const user of users) {
     const slackUserId = user.slackUserId;
 
-    const refreshToken = await getRefreshTokenByUserID(slackUserId);
+    const refreshToken = await calendarDao.getRefreshTokenByUserID(slackUserId);
 
     oauth2Client.setCredentials({ refresh_token: refreshToken });
 
-    const channelId = await getSlackChannelByuserId(slackUserId);
-    const calendarId = await getCalendarByuserId(slackUserId);
-    const slackTeamId = await getTeamIdByUserId(slackUserId);
+    const channelId = await slackDao.getSlackChannelByuserId(slackUserId);
+    const calendarId = await slackDao.getCalendarByuserId(slackUserId);
+    const slackTeamId = await slackDao.getTeamIdByUserId(slackUserId);
 
     const web = await client(slackTeamId);
 
@@ -76,7 +66,7 @@ const calendarReminder = schedule.scheduleJob('0 * * * *', async () => {
         text: `당일 일정이 없습니다 !`,
       };
 
-      await sendSlackMessage(eventOpt, web);
+      await slackService.sendSlackMessage(eventOpt, web);
     } else {
       const eventAttachments = events.map((event) => {
         const startTime =
@@ -107,7 +97,7 @@ const calendarReminder = schedule.scheduleJob('0 * * * *', async () => {
         ],
       };
 
-      await sendReminderMessage(eventOpt, web);
+      await slackService.sendReminderMessage(eventOpt, web);
     }
   }
 });

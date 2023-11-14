@@ -10,8 +10,7 @@ const {
   googleLogout,
 } = require('../utils/slackHome');
 const { client } = require('../utils/webClient');
-
-const { saveSlackUser } = require('../models/slackDao');
+const { slackDao } = require('../models');
 
 const webClient = new WebClient();
 
@@ -91,29 +90,33 @@ const handleButton = async (req, res) => {
 };
 
 const appInstall = async (req, res) => {
-  const code = req.query.code;
+  try {
+    const code = req.query.code;
 
-  const clientId = process.env.SLACK_CLIENT_ID;
-  const clientSecret = process.env.SLACK_CLIENT_SECRET;
+    const clientId = process.env.SLACK_CLIENT_ID;
+    const clientSecret = process.env.SLACK_CLIENT_SECRET;
 
-  webClient.oauth.v2
-    .access({
+    const response = await webClient.oauth.v2.access({
       client_id: clientId,
       client_secret: clientSecret,
       code: code,
-    })
-    .then((response) => {
-      const { access_token, team } = response;
-      console.log(response);
-      saveSlackUser(access_token, team.id, team.name, response.authed_user.id);
-
-      console.log('워크스페이스:', team);
-    })
-    .catch((error) => {
-      console.error('토큰 요청 오류:', error);
     });
 
-  return res.sendStatus(200);
+    const { access_token, team } = response;
+    console.log(response);
+    await slackDao.saveSlackUser(
+      access_token,
+      team.id,
+      team.name,
+      response.authed_user.id
+    );
+
+    console.log('워크스페이스:', team);
+    res.sendStatus(200);
+  } catch (error) {
+    console.error('토큰 요청 및 처리 에러:', error);
+    res.status(500).send('에러 발생');
+  }
 };
 
 const sendSlackMessage = async (eventOpt, web) => {

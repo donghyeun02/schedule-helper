@@ -1,5 +1,5 @@
 const express = require('express');
-const calendarService = require('../services/calendarService');
+const { calendarService } = require('../services');
 
 const router = express.Router();
 

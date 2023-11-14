@@ -1,5 +1,5 @@
 const express = require('express');
-const slackService = require('../services/slackService');
+const { slackService } = require('../services');
 
 const router = express.Router();
 

@@ -174,6 +174,7 @@ const sendReminderMessage = async (eventOpt, web) => {
             emoji: true,
           },
         },
+        { type: 'divider' },
       ],
       attachments: eventOpt.attachments,
     };

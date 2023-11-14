@@ -5,11 +5,13 @@ const { client } = require('../utils/webClient');
 const { oauth2Client } = require('./oauth2');
 const {
   getUserByReminderTime,
-  getCalendarId,
   getRefreshTokenByUserID,
-  getWebhookIdAndResourceId,
 } = require('../models/calendarDao');
-const { getSlackChannel, getTeamIdByWebhookId } = require('../models/slackDao');
+const {
+  getSlackChannelByuserId,
+  getCalendarByuserId,
+  getTeamIdByUserId,
+} = require('../models/slackDao');
 const {
   sendSlackMessage,
   sendReminderMessage,
@@ -38,10 +40,9 @@ const calendarReminder = schedule.scheduleJob('0 * * * *', async () => {
 
     oauth2Client.setCredentials({ refresh_token: refreshToken });
 
-    const webhookId = await getWebhookIdAndResourceId(slackUserId);
-    const channelId = await getSlackChannel(webhookId.webhookId);
-    const calendarId = await getCalendarId(webhookId.webhookId);
-    const slackTeamId = await getTeamIdByWebhookId(webhookId.webhookId);
+    const channelId = await getSlackChannelByuserId(slackUserId);
+    const calendarId = await getCalendarByuserId(slackUserId);
+    const slackTeamId = await getTeamIdByUserId(slackUserId);
 
     const web = await client(slackTeamId);
 
@@ -69,52 +70,41 @@ const calendarReminder = schedule.scheduleJob('0 * * * *', async () => {
     } else if (events.length === 0) {
       const eventOpt = {
         slackChannel: channelId,
-        color: 'FFFF00',
-        title: '당일 일정 알림',
-        summary: '일정이 없습니다.',
+        color: '000000',
+        title: '🔔  당일 일정 ',
+        summary: '리마인더 알림',
         text: `당일 일정이 없습니다 !`,
       };
 
       await sendSlackMessage(eventOpt, web);
     } else {
-      const eventAttachments = events
-        .map((event) => {
-          const startTime = formatDateTime(
-            event.start.dateTime,
-            event.start.timeZone
-          );
-          const endTime = formatDateTime(
-            event.end.dateTime,
-            event.end.timeZone
-          );
-          return {
-            color: 'FFFF00',
-            fallback: 'Slack attachment-level `fallback`',
-            blocks: [
-              {
-                type: 'header',
-                text: {
-                  type: 'plain_text',
-                  text: `*🗓️ ${event.summary}*`,
-                  emoji: true,
-                },
-                type: 'section',
-                text: {
-                  type: 'mrkdwn',
-                  text: `일정 시작 : ${startTime}   일정 종료 : ${endTime}`,
-                },
-              },
-            ],
-          };
-        })
-        .join('\n');
+      const eventAttachments = events.map((event) => {
+        const startTime =
+          event.start.date ||
+          formatDateTime(event.start.dateTime, event.start.timeZone);
+        const endTime =
+          event.end.date ||
+          formatDateTime(event.end.dateTime, event.end.timeZone);
+
+        return {
+          type: 'section',
+          text: {
+            type: 'mrkdwn',
+            text: `* 🗓️ ${event.summary}*\n 일정 시작 : ${startTime}\n 일정 종료 : ${endTime}`,
+          },
+        };
+      });
 
       const eventOpt = {
         slackChannel: channelId,
-        color: 'FFFF00',
-        title: '당일 일정 알림',
-        summary: '당일 일정',
-        attachments: eventAttachments,
+        title: '🔔  당일 일정',
+        attachments: [
+          {
+            color: '000000',
+            fallback: 'Slack attachment-level `fallback`',
+            blocks: [...eventAttachments],
+          },
+        ],
       };
 
       await sendReminderMessage(eventOpt, web);

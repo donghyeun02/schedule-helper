@@ -1,22 +1,7 @@
 const { v4 } = require('uuid');
 const { google } = require('googleapis');
-const {
-  updateReminderTime,
-  updateSlackChannel,
-  updateCalendarId,
-  getSlackChannelByuserId,
-  getCalendarByuserId,
-  getResourceIdByuserId,
-} = require('../models/slackDao');
-const {
-  userExist,
-  getRefreshTokenByUserID,
-  updateWebHook,
-  getUserDeleted,
-  deleteUser,
-  getWebhookIdAndResourceId,
-  deleteWebhook,
-} = require('../models/calendarDao');
+const { slackDao, calendarDao } = require('../models');
+
 const { oauth2Client } = require('../utils/oauth2');
 
 const calendar = google.calendar('v3');
@@ -195,10 +180,10 @@ const appHomeOpened = async ({ body, client }) => {
     const slackUserId = body.event.user;
     const slackTeamId = body.team_id;
 
-    const ExistingUser = parseInt(await userExist(slackUserId));
+    const ExistingUser = parseInt(await calendarDao.userExist(slackUserId));
 
     if (!!ExistingUser) {
-      const isDeleted = parseInt(await getUserDeleted(slackUserId));
+      const isDeleted = parseInt(await calendarDao.getUserDeleted(slackUserId));
 
       if (!isDeleted) {
         const option = await getCalendarList(slackUserId);
@@ -237,7 +222,7 @@ const selectedChannel = async ({ ack, body }) => {
   const userId = body.user.id;
   const slackChannel = body.actions[0].selected_channel;
 
-  await updateSlackChannel(userId, slackChannel);
+  await slackDao.updateSlackChannel(userId, slackChannel);
 };
 
 const selectedCalendar = async ({ ack, body }) => {
@@ -246,7 +231,7 @@ const selectedCalendar = async ({ ack, body }) => {
   const userId = body.user.id;
   const calendar = body.actions[0].selected_option.value;
 
-  await updateCalendarId(calendar, userId);
+  await slackDao.updateCalendarId(calendar, userId);
 };
 
 const registerWebhook = async ({ ack, body, client }) => {
@@ -254,9 +239,9 @@ const registerWebhook = async ({ ack, body, client }) => {
 
   const userId = body.user.id;
 
-  const calendarId = await getCalendarByuserId(userId);
-  const channelId = await getSlackChannelByuserId(userId);
-  const webhook = await getResourceIdByuserId(userId);
+  const calendarId = await slackDao.getCalendarByuserId(userId);
+  const channelId = await slackDao.getSlackChannelByuserId(userId);
+  const webhook = await slackDao.getResourceIdByuserId(userId);
 
   if (!calendarId || !channelId) {
     try {
@@ -346,7 +331,7 @@ const reRegisterWebhook = async ({ ack, body, client }) => {
 
   const userId = body.user.id;
 
-  const webhookData = await getWebhookIdAndResourceId(userId);
+  const webhookData = await calendarDao.getWebhookIdAndResourceId(userId);
 
   if (!webhookData.resourceId) {
     await client.views.open({
@@ -371,8 +356,8 @@ const reRegisterWebhook = async ({ ack, body, client }) => {
       },
     });
   } else if (!!webhookData.resourceId) {
-    const calendarId = await getCalendarByuserId(userId);
-    const refreshToken = await getRefreshTokenByUserID(userId);
+    const calendarId = await slackDao.getCalendarByuserId(userId);
+    const refreshToken = await calendarDao.getRefreshTokenByUserID(userId);
 
     await oauth2Client.setCredentials({ refresh_token: refreshToken });
 
@@ -403,8 +388,8 @@ const dropWebhook = async ({ ack, body, client }) => {
 
   const userId = body.user.id;
 
-  const webhookData = await getWebhookIdAndResourceId(userId);
-  const refreshToken = await getRefreshTokenByUserID(userId);
+  const webhookData = await calendarDao.getWebhookIdAndResourceId(userId);
+  const refreshToken = await calendarDao.getRefreshTokenByUserID(userId);
 
   if (!webhookData.resourceId) {
     await client.views.open({
@@ -445,7 +430,7 @@ const dropWebhook = async ({ ack, body, client }) => {
       },
     });
 
-    await deleteWebhook(userId);
+    await calendarDao.deleteWebhook(userId);
 
     await client.views.open({
       trigger_id: body.trigger_id,
@@ -477,7 +462,7 @@ const registerReminder = async ({ ack, body }) => {
   const userId = body.user.id;
   const time = body.actions[0].selected_time;
 
-  await updateReminderTime(time, userId);
+  await slackDao.updateReminderTime(time, userId);
 };
 
 const googleLogout = async ({ ack, body, client }) => {
@@ -486,10 +471,10 @@ const googleLogout = async ({ ack, body, client }) => {
   const userId = body.user.id;
   const teamId = body.user.team_id;
 
-  const webhookData = await getWebhookIdAndResourceId(userId);
+  const webhookData = await calendarDao.getWebhookIdAndResourceId(userId);
 
   if (!!webhookData.resourceId) {
-    const refreshToken = await getRefreshTokenByUserID(userId);
+    const refreshToken = await calendarDao.getRefreshTokenByUserID(userId);
 
     await oauth2Client.setCredentials({ refresh_token: refreshToken });
 
@@ -507,10 +492,10 @@ const googleLogout = async ({ ack, body, client }) => {
       },
     });
 
-    await deleteWebhook(userId);
+    await calendarDao.deleteWebhook(userId);
   }
 
-  await deleteUser(userId);
+  await calendarDao.deleteUser(userId);
 
   const blocks = await beforeLoginBlock(userId, teamId);
 
@@ -528,7 +513,7 @@ const calendarWebhook = async (userId, calendarId) => {
   try {
     const webhookId = v4();
 
-    const refreshToken = await getRefreshTokenByUserID(userId);
+    const refreshToken = await calendarDao.getRefreshTokenByUserID(userId);
 
     oauth2Client.setCredentials({ refresh_token: refreshToken });
 
@@ -555,7 +540,7 @@ const calendarWebhook = async (userId, calendarId) => {
 
     const resourceId = data.resourceId;
 
-    await updateWebHook(webhookId, resourceId, userId);
+    await calendarDao.updateWebHook(webhookId, resourceId, userId);
 
     console.log('Google Calendar Webhook이 설정되었습니다. : ', data);
   } catch (error) {
@@ -565,7 +550,7 @@ const calendarWebhook = async (userId, calendarId) => {
 };
 
 const getCalendarList = async (slackUserId) => {
-  const refreshToken = await getRefreshTokenByUserID(slackUserId);
+  const refreshToken = await calendarDao.getRefreshTokenByUserID(slackUserId);
 
   oauth2Client.setCredentials({ refresh_token: refreshToken });
 

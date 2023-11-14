@@ -122,6 +122,18 @@ const getTeamIdByWebhookId = async (webhookId) => {
   return teamId.teamId;
 };
 
+const getTeamIdByUserId = async (userId) => {
+  const [teamId] = await appDataSource.query(
+    `
+    SELECT slack_team_id teamId
+    FROM users
+    WHERE slack_user_id = ?`,
+    [userId]
+  );
+
+  return teamId.teamId;
+};
+
 module.exports = {
   updateReminderTime,
   updateSlackChannel,
@@ -134,4 +146,5 @@ module.exports = {
   getTokenInSlacks,
   updateToken,
   getTeamIdByWebhookId,
+  getTeamIdByUserId,
 };

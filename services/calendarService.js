@@ -19,6 +19,7 @@ const googleLogin = async (req, res) => {
 
   const oauth2Url = oauth2Client.generateAuthUrl({
     access_type: 'offline',
+    prompt: 'consent',
     scope: [
       'https://www.googleapis.com/auth/calendar.events.readonly',
       'https://www.googleapis.com/auth/calendar.readonly',
@@ -128,8 +129,8 @@ const webhookEventHandler = async (req, res) => {
         slackChannel: channelId,
         color: 'F0F00E',
         title: '캘린더 구독 알림',
-        summary: '캘린더 구독',
-        text: `캘린더 구독이 시작되었습니다.`,
+        summary: '*캘린더 구독*',
+        text: '캘린더 구독이 시작되었습니다.',
       };
 
       await sendSlackMessage(eventOpt, web);
@@ -137,17 +138,24 @@ const webhookEventHandler = async (req, res) => {
       const event = await getCalendarEvent(refreshToken, calendarId);
 
       const eventStatus = event.status;
-      const eventSummary = event.summary;
+      const eventSummary = event.summary || '(제목 없음)';
       const recurrence = event.recurrence;
+      const eventLink = event.htmlLink;
 
       const createdTime = await getParseTime(event.created);
       const updatedTime = await getParseTime(event.updated);
-      const startDateTime =
-        event.start.date ||
-        (await formatDateTime(event.start.dateTime, event.start.timeZone));
-      const endDateTime =
-        event.end.date ||
-        (await formatDateTime(event.end.dateTime, event.end.timeZone));
+      const startDateTime = event.start.dateTime
+        ? await formatDateTime(event.start.dateTime, event.start.timeZone)
+        : undefined;
+      const endDateTime = event.end.dateTime
+        ? await formatDateTime(event.end.dateTime, event.end.timeZone)
+        : undefined;
+      const startDate = event.start.date || undefined;
+
+      const eventText =
+        startDateTime && endDateTime
+          ? `일정 시작 : ${startDateTime}\n일정 종료 : ${endDateTime}`
+          : `종일 : ${startDate}`;
 
       if (!recurrence) {
         switch (eventStatus) {
@@ -157,8 +165,8 @@ const webhookEventHandler = async (req, res) => {
                 slackChannel: channelId,
                 color: '2FA86B',
                 title: '🗓️ 일정 등록 알림',
-                summary: eventSummary,
-                text: `일정 시작 : ${startDateTime} \n일정 종료 : ${endDateTime}`,
+                summary: `<${eventLink}|*${eventSummary}*>`,
+                text: eventText,
               };
 
               await sendSlackMessage(eventOpt, web);
@@ -167,8 +175,8 @@ const webhookEventHandler = async (req, res) => {
                 slackChannel: channelId,
                 color: '1717E8',
                 title: '🗓️ 일정 변경 알림',
-                summary: eventSummary,
-                text: `일정 시작 : ${startDateTime} \n일정 종료 : ${endDateTime}`,
+                summary: `<${eventLink}|*${eventSummary}*>`,
+                text: eventText,
               };
 
               await sendSlackMessage(eventOpt, web);
@@ -179,8 +187,8 @@ const webhookEventHandler = async (req, res) => {
               slackChannel: channelId,
               color: 'DB2525',
               title: '🗓️ 일정 삭제 알림',
-              summary: eventSummary,
-              text: `일정 시작 : ${startDateTime} \n일정 종료 : ${endDateTime}`,
+              summary: `*${eventSummary}*`,
+              text: eventText,
             };
 
             await sendSlackMessage(eventOpt, web);
@@ -196,8 +204,8 @@ const webhookEventHandler = async (req, res) => {
                 slackChannel: channelId,
                 color: '2FA86B',
                 title: `🗓️ 일정 등록 알림 (${recurrenceEvent})`,
-                summary: eventSummary,
-                text: `일정 시작 : ${startDateTime} \n일정 종료 : ${endDateTime}`,
+                summary: `<${eventLink}|*${eventSummary}*>`,
+                text: eventText,
               };
 
               await sendSlackMessage(eventOpt, web);
@@ -206,8 +214,8 @@ const webhookEventHandler = async (req, res) => {
                 slackChannel: channelId,
                 color: '1717E8',
                 title: `🗓️ 일정 변경 알림 (${recurrenceEvent})`,
-                summary: eventSummary,
-                text: `일정 시작 : ${startDateTime} \n일정 종료 : ${endDateTime}`,
+                summary: `<${eventLink}|*${eventSummary}*>`,
+                text: eventText,
               };
 
               await sendSlackMessage(eventOpt, web);
@@ -218,8 +226,8 @@ const webhookEventHandler = async (req, res) => {
               slackChannel: channelId,
               color: 'DB2525',
               title: `🗓️ 일정 삭제 알림 (${recurrenceEvent})`,
-              summary: eventSummary,
-              text: `일정 시작 : ${startDateTime} \n일정 종료 : ${endDateTime}`,
+              summary: `*${eventSummary}*`,
+              text: eventText,
             };
 
             await sendSlackMessage(eventOpt, web);

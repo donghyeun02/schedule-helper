@@ -69,32 +69,38 @@ const calendarReminder = schedule.scheduleJob('0 * * * *', async () => {
       await slackService.sendSlackMessage(eventOpt, web);
     } else {
       const eventAttachments = events.map((event) => {
-        const startTime =
-          event.start.date ||
-          formatDateTime(event.start.dateTime, event.start.timeZone);
-        const endTime =
-          event.end.date ||
-          formatDateTime(event.end.dateTime, event.end.timeZone);
+        const startDateTime = event.start.dateTime
+          ? formatDateTime(event.start.dateTime, event.start.timeZone)
+          : undefined;
+        const endDateTime = event.end.dateTime
+          ? formatDateTime(event.end.dateTime, event.end.timeZone)
+          : undefined;
+        const startDate = event.start.date || undefined;
+
+        const eventText =
+          startDateTime && endDateTime
+            ? `일정 : ${startDateTime} - ${endDateTime}`
+            : `종일 : ${startDate}`;
 
         return {
-          type: 'section',
-          text: {
-            type: 'mrkdwn',
-            text: `* 🗓️ ${event.summary}*\n 일정 시작 : ${startTime}\n 일정 종료 : ${endTime}`,
-          },
+          color: '000000',
+          fallback: 'Slack attachment-level `fallback`',
+          blocks: [
+            {
+              type: 'section',
+              text: {
+                type: 'mrkdwn',
+                text: `* 🗓️ <${event.htmlLink}|${event.summary}>*\n ${eventText}`,
+              },
+            },
+          ],
         };
       });
 
       const eventOpt = {
         slackChannel: channelId,
         title: '🔔  당일 일정',
-        attachments: [
-          {
-            color: '000000',
-            fallback: 'Slack attachment-level `fallback`',
-            blocks: [...eventAttachments],
-          },
-        ],
+        attachments: [...eventAttachments],
       };
 
       await slackService.sendReminderMessage(eventOpt, web);
@@ -113,10 +119,6 @@ const formatCurrentHour = (currentDate) => {
 
 const formatDateTime = (dateTime, tz) => {
   const opts = {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    weekday: 'long',
     hour: '2-digit',
     minute: '2-digit',
     hour12: false,

@@ -139,11 +139,10 @@ const sendSlackMessage = async (eventOpt, web) => {
           fallback: 'Slack attachment-level `fallback`',
           blocks: [
             {
-              type: 'header',
+              type: 'section',
               text: {
-                type: 'plain_text',
+                type: 'mrkdwn',
                 text: eventOpt.summary,
-                emoji: true,
               },
             },
             {

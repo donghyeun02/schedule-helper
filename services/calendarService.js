@@ -286,8 +286,6 @@ const formatDateTime = (dateTime, tz) => {
   const format = new Intl.DateTimeFormat('ko-KR', opts);
   const formattedDate = format.format(new Date(dateTime));
 
-  console.log(formattedDate);
-
   const [datePart, timePart] = formattedDate.split('요일 ');
   const [year, month, day, weekday] = datePart
     .split('.')

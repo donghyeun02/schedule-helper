@@ -12,7 +12,7 @@ const beforeLoginBlock = async (slackUserId, slackTeamId) => {
       type: 'header',
       text: {
         type: 'plain_text',
-        text: '구글 캘린더 알리미',
+        text: '스케줄 헬퍼',
       },
     },
     {
@@ -43,7 +43,7 @@ const afterLoginBlock = async (option) => {
       type: 'header',
       text: {
         type: 'plain_text',
-        text: '구글 캘린더 알리미',
+        text: '스케줄 헬퍼',
       },
     },
     {

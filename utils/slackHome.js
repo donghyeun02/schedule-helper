@@ -16,6 +16,9 @@ const beforeLoginBlock = async (slackUserId, slackTeamId) => {
       },
     },
     {
+      type: 'divider',
+    },
+    {
       type: 'actions',
       elements: [
         {

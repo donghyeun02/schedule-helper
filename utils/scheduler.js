@@ -68,7 +68,7 @@ const calendarReminder = schedule.scheduleJob('0 * * * *', async () => {
 
       await slackService.sendSlackMessage(eventOpt, web);
     } else {
-      const eventAttachments = events.map((event) => {
+      const eventAttachments = await events.map((event) => {
         const startDateTime = event.start.dateTime
           ? formatDateTime(event.start.dateTime, event.start.timeZone)
           : undefined;
@@ -76,6 +76,7 @@ const calendarReminder = schedule.scheduleJob('0 * * * *', async () => {
           ? formatDateTime(event.end.dateTime, event.end.timeZone)
           : undefined;
         const startDate = event.start.date || undefined;
+        const eventSummary = event.summary || '(제목 없음)';
 
         const eventText =
           startDateTime && endDateTime
@@ -90,7 +91,7 @@ const calendarReminder = schedule.scheduleJob('0 * * * *', async () => {
               type: 'section',
               text: {
                 type: 'mrkdwn',
-                text: `* 🗓️ <${event.htmlLink}|${event.summary}>*\n ${eventText}`,
+                text: `* 🗓️ <${event.htmlLink}|${eventSummary}>*\n ${eventText}`,
               },
             },
           ],
@@ -119,15 +120,16 @@ const formatCurrentHour = (currentDate) => {
 
 const formatDateTime = (dateTime, tz) => {
   const opts = {
-    hour: '2-digit',
-    minute: '2-digit',
+    hour: 'numeric',
+    minute: 'numeric',
     hour12: false,
     timeZone: tz,
   };
 
   const format = new Intl.DateTimeFormat('ko-KR', opts);
+  const formattedTime = format.format(new Date(dateTime));
 
-  return format.format(new Date(dateTime));
+  return formattedTime.replace(/(\d+:\d+)/, '$1시').replace(':', '분 ');
 };
 
 module.exports = { calendarReminder };

@@ -7,6 +7,7 @@ const { oauth2Client } = require('../utils/oauth2');
 const { getCalendarList, afterLoginBlock } = require('../utils/slackHome');
 const { client } = require('../utils/webClient');
 const { getRecurrenceEvent } = require('../utils/recurrenceEvent');
+const { sendErrorMessageToServer } = require('../utils/errorToServer');
 
 const calendar = google.calendar('v3');
 
@@ -238,6 +239,12 @@ const webhookEventHandler = async (req, res) => {
 
     res.sendStatus(200);
   } catch (error) {
+    const eventData = req.headers;
+    const webhookId = eventData['x-goog-channel-id'];
+    const slackTeamId = await slackDao.getTeamIdByWebhookId(webhookId);
+
+    await sendErrorMessageToServer(slackTeamId, error.stack);
+
     console.error('Google Calendar 이벤트 처리 에러:', error);
     res.status(500).send('에러 발생');
   }

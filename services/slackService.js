@@ -11,99 +11,111 @@ const {
 } = require('../utils/slackHome');
 const { client } = require('../utils/webClient');
 const { slackDao } = require('../models');
+const { sendErrorMessageToServer } = require('../utils/errorToServer');
 
 const webClient = new WebClient();
 
 const handleEvent = async (req, res) => {
-  const body = req.body;
-  const teamId = body.team_id;
+  try {
+    const body = req.body;
+    const teamId = body.team_id;
 
-  const web = await client(teamId);
+    const web = await client(teamId);
 
-  if (body.event.type === 'app_home_opened') {
-    return await appHomeOpened({
-      body: body,
-      client: web,
-    });
+    if (body.event.type === 'app_home_opened') {
+      return await appHomeOpened({
+        body: body,
+        client: web,
+      });
+    }
+
+    return res.sendStatus(200);
+  } catch (error) {
+    const teamId = body.team_id;
+    await sendErrorMessageToServer(teamId, error.stack);
+    return res.status(500);
   }
-
-  return res.sendStatus(200);
 };
 
 const handleButton = async (req, res) => {
-  const payload = JSON.parse(req.body.payload);
-  const teamId = payload.user.team_id;
-  const actionId = payload.actions[0].action_id;
+  try {
+    const payload = JSON.parse(req.body.payload);
+    const teamId = payload.user.team_id;
+    const actionId = payload.actions[0].action_id;
 
-  const web = await client(teamId);
+    const web = await client(teamId);
 
-  switch (actionId) {
-    case 'selected_channel':
-      selectedChannel({
-        ack: () => {},
-        body: payload,
-      });
-      break;
-    case 'selected_calendar':
-      selectedCalendar({
-        ack: () => {},
-        body: payload,
-      });
-      break;
-    case 'webhook_button':
-      registerWebhook({
-        ack: () => {},
-        body: payload,
-        client: web,
-      });
-      break;
-    case 're-register_Webhook':
-      reRegisterWebhook({
-        ack: () => {},
-        body: payload,
-        client: web,
-      });
-      break;
-    case 'delete_webhook':
-      dropWebhook({
-        ack: () => {},
-        body: payload,
-        client: web,
-      });
-      break;
-    case 'time':
-      registerReminder({
-        ack: () => {},
-        body: payload,
-      });
-      break;
-    case 'google_logout':
-      googleLogout({
-        ack: () => {},
-        body: payload,
-        client: web,
-      });
-      break;
+    switch (actionId) {
+      case 'selected_channel':
+        selectedChannel({
+          ack: () => {},
+          body: payload,
+        });
+        break;
+      case 'selected_calendar':
+        selectedCalendar({
+          ack: () => {},
+          body: payload,
+        });
+        break;
+      case 'webhook_button':
+        registerWebhook({
+          ack: () => {},
+          body: payload,
+          client: web,
+        });
+        break;
+      case 're-register_Webhook':
+        reRegisterWebhook({
+          ack: () => {},
+          body: payload,
+          client: web,
+        });
+        break;
+      case 'delete_webhook':
+        dropWebhook({
+          ack: () => {},
+          body: payload,
+          client: web,
+        });
+        break;
+      case 'time':
+        registerReminder({
+          ack: () => {},
+          body: payload,
+        });
+        break;
+      case 'google_logout':
+        googleLogout({
+          ack: () => {},
+          body: payload,
+          client: web,
+        });
+        break;
+    }
+
+    return res.sendStatus(200);
+  } catch (error) {
+    const teamId = payload.user.team_id;
+    await sendErrorMessageToServer(teamId, error.stack);
+    return res.status(500);
   }
-
-  return res.sendStatus(200);
 };
 
 const appInstall = async (req, res) => {
+  const code = req.query.code;
+  const clientId = process.env.SLACK_CLIENT_ID;
+  const clientSecret = process.env.SLACK_CLIENT_SECRET;
+
+  const response = await webClient.oauth.v2.access({
+    client_id: clientId,
+    client_secret: clientSecret,
+    code: code,
+  });
+
+  const { access_token, team } = response;
+  console.log(response);
   try {
-    const code = req.query.code;
-
-    const clientId = process.env.SLACK_CLIENT_ID;
-    const clientSecret = process.env.SLACK_CLIENT_SECRET;
-
-    const response = await webClient.oauth.v2.access({
-      client_id: clientId,
-      client_secret: clientSecret,
-      code: code,
-    });
-
-    const { access_token, team } = response;
-    console.log(response);
     await slackDao.saveSlackUser(
       access_token,
       team.id,
@@ -114,7 +126,8 @@ const appInstall = async (req, res) => {
     console.log('워크스페이스:', team);
     res.sendStatus(200);
   } catch (error) {
-    console.error('토큰 요청 및 처리 에러:', error);
+    const teamId = team.id;
+    await sendErrorMessageToServer(teamId, error.stack);
     res.status(500).send('에러 발생');
   }
 };

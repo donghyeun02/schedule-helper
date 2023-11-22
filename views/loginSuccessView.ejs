@@ -42,35 +42,12 @@
         font-size: 18px;
         margin-bottom: 20px;
       }
-
-      button {
-        background-color: #4285f4;
-        color: #fff;
-        border: none;
-        padding: 12px 24px;
-        font-size: 16px;
-        cursor: pointer;
-        border-radius: 5px;
-        transition: background-color 0.3s ease;
-      }
-
-      button:hover {
-        background-color: #3367d6;
-      }
     </style>
   </head>
   <body>
     <div class="container">
       <h1><%= title %></h1>
       <p><%= message %></p>
-
-      <button onclick="closeWindow()">창 닫기</button>
     </div>
-
-    <script>
-      function closeWindow() {
-        window.close();
-      }
-    </script>
   </body>
 </html>

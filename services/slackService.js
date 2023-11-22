@@ -20,6 +20,7 @@ const handleEvent = async (req, res) => {
     const body = req.body;
     const teamId = body.team_id;
 
+    console.log(body);
     const web = await client(teamId);
 
     if (body.event.type === 'app_home_opened') {

@@ -84,11 +84,13 @@ const googleOAuth = async (req, res) => {
         await slackDao.updateToken(token, slackUserId);
       }
 
-      res.status(200);
+      const message = '로그인이 되었습니다.';
+      res.render('loginSuccessView', { message });
     } else if (ExistingUser === '1') {
       await calendarDao.insertUser(slackUserId);
 
-      res.status(200);
+      const message = '로그인이 되었습니다.';
+      res.render('loginSuccessView', { message });
     }
     const option = await getCalendarList(slackUserId);
     const blocks = await afterLoginBlock(option);

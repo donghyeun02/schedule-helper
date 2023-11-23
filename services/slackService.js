@@ -124,7 +124,9 @@ const appInstall = async (req, res) => {
     );
 
     console.log('워크스페이스:', team);
-    res.sendStatus(200);
+
+    const message = '앱이 추가되었습니다.';
+    res.render('appInstallView', { message });
   } catch (error) {
     const teamId = team.id;
     await sendErrorMessageToServer(teamId, error.stack);

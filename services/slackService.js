@@ -16,8 +16,8 @@ const { sendErrorMessageToServer } = require('../utils/errorToServer');
 const webClient = new WebClient();
 
 const handleEvent = async (req, res) => {
+  const body = req.body;
   try {
-    const body = req.body;
     const teamId = body.team_id;
 
     const web = await client(teamId);
@@ -38,8 +38,8 @@ const handleEvent = async (req, res) => {
 };
 
 const handleButton = async (req, res) => {
+  const payload = JSON.parse(req.body.payload);
   try {
-    const payload = JSON.parse(req.body.payload);
     const teamId = payload.user.team_id;
     const actionId = payload.actions[0].action_id;
 

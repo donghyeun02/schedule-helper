@@ -50,6 +50,7 @@ const handleButton = async (req, res) => {
         selectedChannel({
           ack: () => {},
           body: payload,
+          client: web,
         });
         break;
       case 'selected_calendar':

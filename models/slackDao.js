@@ -10,13 +10,13 @@ const updateReminderTime = async (time, userId) => {
   );
 };
 
-const updateSlackChannel = async (userId, slackChannel) => {
+const updateSlackChannel = async (userId, slackChannel, slackChannelName) => {
   return await appDataSource.query(
     `
     UPDATE webhooks
-    SET slack_channel = ?
+    SET slack_channel = ?, slack_channel_name = ?
     WHERE slack_user_id = ?`,
-    [slackChannel, userId]
+    [slackChannel, slackChannelName, userId]
   );
 };
 

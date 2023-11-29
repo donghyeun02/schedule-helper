@@ -221,14 +221,18 @@ const appHomeOpened = async ({ body, client }) => {
   }
 };
 
-const selectedChannel = async ({ ack, body }) => {
+const selectedChannel = async ({ ack, body, client }) => {
   ack();
   try {
     const userId = body.user.id;
     const slackChannel = body.actions[0].selected_channel;
+    const slackChannelInfo = await client.conversations.info({
+      channel: slackChannel,
+    });
+    const slackChannelName = slackChannelInfo.channel.name;
 
-    await slackDao.updateSlackChannel(userId, slackChannel);
-  } catch {
+    await slackDao.updateSlackChannel(userId, slackChannel, slackChannelName);
+  } catch (error) {
     const customError = new Error('채널 선택 오류');
     customError.code = 500;
     throw customError;
@@ -242,7 +246,7 @@ const selectedCalendar = async ({ ack, body }) => {
     const calendar = body.actions[0].selected_option.value;
 
     await slackDao.updateCalendarId(calendar, userId);
-  } catch {
+  } catch (error) {
     const customError = new Error('캘린더 선택 오류');
     customError.code = 500;
     throw customError;
@@ -497,7 +501,7 @@ const dropWebhook = async ({ ack, body, client }) => {
         },
       });
     }
-  } catch {
+  } catch (error) {
     const customError = new Error('웹훅 삭제 오류');
     customError.code = 500;
     throw customError;
@@ -511,7 +515,7 @@ const registerReminder = async ({ ack, body }) => {
     const time = body.actions[0].selected_time;
 
     await slackDao.updateReminderTime(time, userId);
-  } catch {
+  } catch (error) {
     const customError = new Error('리마인더 시간대 등록 오류');
     customError.code = 500;
     throw customError;
@@ -560,7 +564,7 @@ const googleLogout = async ({ ack, body, client }) => {
         blocks: blocks,
       },
     });
-  } catch {
+  } catch (error) {
     const customError = new Error('구글 로그아웃 오류');
     customError.code = 500;
     throw customError;

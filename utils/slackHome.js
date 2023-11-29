@@ -215,26 +215,38 @@ const appHomeOpened = async ({ body, client }) => {
       },
     });
   } catch (error) {
-    console.error('Error:', error);
+    const customError = new Error('App open 오류');
+    customError.code = 500;
+    throw customError;
   }
 };
 
 const selectedChannel = async ({ ack, body }) => {
   ack();
+  try {
+    const userId = body.user.id;
+    const slackChannel = body.actions[0].selected_channel;
 
-  const userId = body.user.id;
-  const slackChannel = body.actions[0].selected_channel;
-
-  await slackDao.updateSlackChannel(userId, slackChannel);
+    await slackDao.updateSlackChannel(userId, slackChannel);
+  } catch {
+    const customError = new Error('채널 선택 오류');
+    customError.code = 500;
+    throw customError;
+  }
 };
 
 const selectedCalendar = async ({ ack, body }) => {
   ack();
+  try {
+    const userId = body.user.id;
+    const calendar = body.actions[0].selected_option.value;
 
-  const userId = body.user.id;
-  const calendar = body.actions[0].selected_option.value;
-
-  await slackDao.updateCalendarId(calendar, userId);
+    await slackDao.updateCalendarId(calendar, userId);
+  } catch {
+    const customError = new Error('캘린더 선택 오류');
+    customError.code = 500;
+    throw customError;
+  }
 };
 
 const registerWebhook = async ({ ack, body, client }) => {
@@ -296,7 +308,9 @@ const registerWebhook = async ({ ack, body, client }) => {
         },
       });
     } catch (error) {
-      console.error('웹훅이 이미 등록되어있을 때 모달창 오류 :', error);
+      const customError = new Error('웹훅이 이미 되어있을 경우 오류');
+      customError.code = 500;
+      throw customError;
     }
   } else {
     try {
@@ -324,7 +338,9 @@ const registerWebhook = async ({ ack, body, client }) => {
         },
       });
     } catch (error) {
-      console.error('웹훅 등록 오류 :', error);
+      const customError = new Error('웹훅 등록 중 오류');
+      customError.code = 500;
+      throw customError;
     }
   }
 };
@@ -378,8 +394,32 @@ const reRegisterWebhook = async ({ ack, body, client }) => {
           Accept: `application/json`,
         },
       });
+
+      await client.views.open({
+        trigger_id: body.trigger_id,
+        view: {
+          type: 'modal',
+          callback_id: 'success_modal',
+          title: {
+            type: 'plain_text',
+            text: '캘린더 구독 재등록',
+          },
+          blocks: [
+            {
+              type: 'section',
+              block_id: 'error_message',
+              text: {
+                type: 'mrkdwn',
+                text: '캘린더 구독이 재시작되었습니다.',
+              },
+            },
+          ],
+        },
+      });
     } catch (error) {
-      console.error('웹훅 재등록 오류 (웹훅 삭제) :', error);
+      const customError = new Error('웹훅 재등록 오류');
+      customError.code = 500;
+      throw customError;
     }
 
     await calendarWebhook(userId, calendarId);
@@ -388,128 +428,143 @@ const reRegisterWebhook = async ({ ack, body, client }) => {
 
 const dropWebhook = async ({ ack, body, client }) => {
   ack();
+  try {
+    const userId = body.user.id;
 
-  const userId = body.user.id;
+    const webhookData = await calendarDao.getWebhookIdAndResourceId(userId);
+    const refreshToken = await calendarDao.getRefreshTokenByUserID(userId);
 
-  const webhookData = await calendarDao.getWebhookIdAndResourceId(userId);
-  const refreshToken = await calendarDao.getRefreshTokenByUserID(userId);
-
-  if (!webhookData.resourceId) {
-    await client.views.open({
-      trigger_id: body.trigger_id,
-      view: {
-        type: 'modal',
-        callback_id: 'success_modal',
-        title: {
-          type: 'plain_text',
-          text: '웹훅 종료 오류',
-        },
-        blocks: [
-          {
-            type: 'section',
-            block_id: 'error_message',
-            text: {
-              type: 'mrkdwn',
-              text: '구독된 캘린더가 없습니다.',
-            },
+    if (!webhookData.resourceId) {
+      await client.views.open({
+        trigger_id: body.trigger_id,
+        view: {
+          type: 'modal',
+          callback_id: 'success_modal',
+          title: {
+            type: 'plain_text',
+            text: '웹훅 종료 오류',
           },
-        ],
-      },
-    });
-  } else if (!!webhookData.resourceId) {
-    await oauth2Client.setCredentials({ refresh_token: refreshToken });
-
-    const getAccessToken = await oauth2Client.getAccessToken();
-    const accessToken = getAccessToken.token;
-
-    await calendar.channels.stop({
-      resource: {
-        id: webhookData.webhookId,
-        resourceId: webhookData.resourceId,
-      },
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        Accept: `application/json`,
-      },
-    });
-
-    await calendarDao.deleteWebhook(userId);
-
-    await client.views.open({
-      trigger_id: body.trigger_id,
-      view: {
-        type: 'modal',
-        callback_id: 'success_modal',
-        title: {
-          type: 'plain_text',
-          text: '웹훅 종료',
-        },
-        blocks: [
-          {
-            type: 'section',
-            block_id: 'error_message',
-            text: {
-              type: 'mrkdwn',
-              text: '구독된 캘린더가 종료되었습니다.',
+          blocks: [
+            {
+              type: 'section',
+              block_id: 'error_message',
+              text: {
+                type: 'mrkdwn',
+                text: '구독된 캘린더가 없습니다.',
+              },
             },
+          ],
+        },
+      });
+    } else if (!!webhookData.resourceId) {
+      await oauth2Client.setCredentials({ refresh_token: refreshToken });
+
+      const getAccessToken = await oauth2Client.getAccessToken();
+      const accessToken = getAccessToken.token;
+
+      await calendar.channels.stop({
+        resource: {
+          id: webhookData.webhookId,
+          resourceId: webhookData.resourceId,
+        },
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          Accept: `application/json`,
+        },
+      });
+
+      await calendarDao.deleteWebhook(userId);
+
+      await client.views.open({
+        trigger_id: body.trigger_id,
+        view: {
+          type: 'modal',
+          callback_id: 'success_modal',
+          title: {
+            type: 'plain_text',
+            text: '웹훅 종료',
           },
-        ],
-      },
-    });
+          blocks: [
+            {
+              type: 'section',
+              block_id: 'error_message',
+              text: {
+                type: 'mrkdwn',
+                text: '구독된 캘린더가 종료되었습니다.',
+              },
+            },
+          ],
+        },
+      });
+    }
+  } catch {
+    const customError = new Error('웹훅 삭제 오류');
+    customError.code = 500;
+    throw customError;
   }
 };
 
 const registerReminder = async ({ ack, body }) => {
   ack();
+  try {
+    const userId = body.user.id;
+    const time = body.actions[0].selected_time;
 
-  const userId = body.user.id;
-  const time = body.actions[0].selected_time;
-
-  await slackDao.updateReminderTime(time, userId);
+    await slackDao.updateReminderTime(time, userId);
+  } catch {
+    const customError = new Error('리마인더 시간대 등록 오류');
+    customError.code = 500;
+    throw customError;
+  }
 };
 
 const googleLogout = async ({ ack, body, client }) => {
   ack();
+  try {
+    const userId = body.user.id;
+    const teamId = body.user.team_id;
 
-  const userId = body.user.id;
-  const teamId = body.user.team_id;
+    const webhookData = await calendarDao.getWebhookIdAndResourceId(userId);
 
-  const webhookData = await calendarDao.getWebhookIdAndResourceId(userId);
+    if (!!webhookData.resourceId) {
+      const refreshToken = await calendarDao.getRefreshTokenByUserID(userId);
 
-  if (!!webhookData.resourceId) {
-    const refreshToken = await calendarDao.getRefreshTokenByUserID(userId);
+      await oauth2Client.setCredentials({ refresh_token: refreshToken });
 
-    await oauth2Client.setCredentials({ refresh_token: refreshToken });
+      const getAccessToken = await oauth2Client.getAccessToken();
+      const accessToken = getAccessToken.token;
 
-    const getAccessToken = await oauth2Client.getAccessToken();
-    const accessToken = getAccessToken.token;
+      await calendar.channels.stop({
+        resource: {
+          id: webhookData.webhookId,
+          resourceId: webhookData.resourceId,
+        },
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          Accept: `application/json`,
+        },
+      });
 
-    await calendar.channels.stop({
-      resource: {
-        id: webhookData.webhookId,
-        resourceId: webhookData.resourceId,
-      },
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        Accept: `application/json`,
+      await calendarDao.deleteWebhook(userId);
+    }
+
+    await calendarDao.deleteUser(userId);
+
+    const blocks = await beforeLoginBlock(userId, teamId);
+
+    return await client.views.publish({
+      user_id: userId,
+      view: {
+        type: 'home',
+        callback_id: 'home_view',
+        blocks: blocks,
       },
     });
-
-    await calendarDao.deleteWebhook(userId);
+  } catch {
+    const customError = new Error('구글 로그아웃 오류');
+    customError.code = 500;
+    throw customError;
   }
-
-  await calendarDao.deleteUser(userId);
-
-  const blocks = await beforeLoginBlock(userId, teamId);
-
-  return await client.views.publish({
-    user_id: userId,
-    view: {
-      type: 'home',
-      callback_id: 'home_view',
-      blocks: blocks,
-    },
-  });
 };
 
 const calendarWebhook = async (userId, calendarId) => {
@@ -547,8 +602,9 @@ const calendarWebhook = async (userId, calendarId) => {
 
     console.log('Google Calendar Webhook이 설정되었습니다. : ', data);
   } catch (error) {
-    console.error('Google Calendar Webhook 설정 에러 :', error);
-    throw error;
+    const customError = new Error('웹훅 등록 에러');
+    customError.code = 500;
+    throw customError;
   }
 };
 

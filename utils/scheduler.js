@@ -129,7 +129,7 @@ const formatDateTime = (dateTime, tz) => {
   const format = new Intl.DateTimeFormat('ko-KR', opts);
   const formattedTime = format.format(new Date(dateTime));
 
-  return formattedTime.replace(/(\d+:\d+)/, '$1시').replace(':', '분 ');
+  return formattedTime.replace(/(\d+:\d+)/, '$1분').replace(':', '시 ');
 };
 
 module.exports = { calendarReminder };

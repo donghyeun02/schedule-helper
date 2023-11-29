@@ -65,7 +65,7 @@ const afterLoginBlock = async (option) => {
         response_url_enabled: true,
         placeholder: {
           type: 'plain_text',
-          text: '채널 선택',
+          text: '채널 선택', // user가 설정한 채널로 나오도록
         },
       },
     },
@@ -79,7 +79,7 @@ const afterLoginBlock = async (option) => {
         type: 'static_select',
         placeholder: {
           type: 'plain_text',
-          text: '캘린더 목록',
+          text: '캘린더 목록', // user가 설정한 캘린더가 나오도록
           emoji: true,
         },
         options: option,
@@ -615,7 +615,6 @@ const getCalendarList = async (slackUserId) => {
 
   const calendars = await calendar.calendarList.list({
     auth: oauth2Client,
-    showDeleted: true,
   });
 
   const calendarList = calendars.data.items;

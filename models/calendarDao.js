@@ -17,6 +17,24 @@ const createUser = async (email, refreshToken, slackUserId, slackTeamId) => {
   );
 };
 
+const updateUser = async (email, refreshToken, slackUserId) => {
+  await appDataSource.query(
+    `
+    UPDATE users
+    SET email = ?, refresh_token = ?, is_deleted = 0
+    WHERE slack_user_id = ?`,
+    [email, refreshToken, slackUserId]
+  );
+
+  await appDataSource.query(
+    `
+    UPDATE webhooks
+    SET user_email = ?
+    WHERE slack_user_id = ?`,
+    [email, slackUserId]
+  );
+};
+
 const userExist = async (slackUserId) => {
   const user = await appDataSource.query(
     `
@@ -121,16 +139,6 @@ const deleteUser = async (slackUserId) => {
   );
 };
 
-const insertUser = async (slackUserId) => {
-  await appDataSource.query(
-    `
-    UPDATE users
-    SET is_deleted = 0
-    WHERE slack_user_id = ?`,
-    [slackUserId]
-  );
-};
-
 const getWebhookIdAndResourceId = async (slackUserId) => {
   const [{ webhookId, resourceId }] = await appDataSource.query(
     `
@@ -156,6 +164,7 @@ const deleteWebhook = async (slackUserId) => {
 
 module.exports = {
   createUser,
+  updateUser,
   userExist,
   getCalendarId,
   updateWebHook,
@@ -165,7 +174,6 @@ module.exports = {
   getUserByReminderTime,
   getUserDeleted,
   deleteUser,
-  insertUser,
   getWebhookIdAndResourceId,
   deleteWebhook,
 };

@@ -47,51 +47,48 @@ const googleOAuth = async (req, res) => {
 
     const ExistingUser = await calendarDao.userExist(slackUserId);
 
+    const getToken = await oauth2Client.getToken({
+      code: authCode,
+      scope: [
+        'https://www.googleapis.com/auth/calendar.events.readonly',
+        'https://www.googleapis.com/auth/calendar.readonly',
+        'https://www.googleapis.com/auth/userinfo.email',
+      ],
+      access_type: 'offline',
+      prompt: 'consent',
+    });
+
+    const accessToken = getToken.tokens.access_token;
+    const refreshToken = getToken.tokens.refresh_token;
+
+    oauth2Client.credentials = {
+      access_token: accessToken,
+      refresh_token: refreshToken,
+    };
+
+    const oauth2 = google.oauth2('v2');
+    const userInfo = await oauth2.userinfo.get({ auth: oauth2Client });
+
+    const userEmail = userInfo.data.email;
     if (ExistingUser === '0') {
-      const getToken = await oauth2Client.getToken({
-        code: authCode,
-        scope: [
-          'https://www.googleapis.com/auth/calendar.events.readonly',
-          'https://www.googleapis.com/auth/calendar.readonly',
-          'https://www.googleapis.com/auth/userinfo.email',
-        ],
-        access_type: 'offline',
-        prompt: 'consent',
-      });
-
-      const accessToken = getToken.tokens.access_token;
-      const refreshToken = getToken.tokens.refresh_token;
-
-      oauth2Client.credentials = {
-        access_token: accessToken,
-        refresh_token: refreshToken,
-      };
-
-      const oauth2 = google.oauth2('v2');
-      const userInfo = await oauth2.userinfo.get({ auth: oauth2Client });
-
-      const userEmail = userInfo.data.email;
-
       await calendarDao.createUser(
         userEmail,
         refreshToken,
         slackUserId,
         slackTeamId
       );
-
-      if (!refreshToken) {
-        const token = await calendarDao.getRefreshTokenByEmail(userEmail);
-        await slackDao.updateToken(token, slackUserId);
-      }
-
-      const message = '로그인이 되었습니다.';
-      res.render('loginSuccessView', { message });
     } else if (ExistingUser === '1') {
-      await calendarDao.insertUser(slackUserId);
-
-      const message = '로그인이 되었습니다.';
-      res.render('loginSuccessView', { message });
+      await calendarDao.updateUser(userEmail, refreshToken, slackUserId);
     }
+
+    if (!refreshToken) {
+      const token = await calendarDao.getRefreshTokenByEmail(userEmail);
+      await slackDao.updateToken(token, slackUserId);
+    }
+
+    const message = '로그인이 되었습니다.';
+    res.render('loginSuccessView', { message });
+
     const option = await getCalendarList(slackUserId);
     const blocks = await afterLoginBlock(option);
 

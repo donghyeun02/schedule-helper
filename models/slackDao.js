@@ -10,23 +10,23 @@ const updateReminderTime = async (time, userId) => {
   );
 };
 
-const updateSlackChannel = async (userId, slackChannel) => {
+const updateSlackChannel = async (userId, slackChannel, slackChannelName) => {
   return await appDataSource.query(
     `
     UPDATE webhooks
-    SET slack_channel = ?
+    SET slack_channel = ?, slack_channel_name = ?
     WHERE slack_user_id = ?`,
-    [slackChannel, userId]
+    [slackChannel, slackChannelName, userId]
   );
 };
 
-const updateCalendarId = async (calendar, userId) => {
+const updateCalendarId = async (calendar, calendarName, userId) => {
   return await appDataSource.query(
     `
     UPDATE webhooks
-    SET calendar = ?
+    SET calendar = ?, calendar_name = ?
     WHERE slack_user_id = ?`,
-    [calendar, userId]
+    [calendar, calendarName, userId]
   );
 };
 
@@ -134,6 +134,18 @@ const getTeamIdByUserId = async (userId) => {
   return teamId.teamId;
 };
 
+const getWorkSpace = async (teamId) => {
+  const [workSpace] = await appDataSource.query(
+    `
+    SELECT work_space workSpace
+    FROM slacks
+    WHERE team_id = ?`,
+    [teamId]
+  );
+
+  return workSpace.workSpace;
+};
+
 module.exports = {
   updateReminderTime,
   updateSlackChannel,
@@ -147,4 +159,5 @@ module.exports = {
   updateToken,
   getTeamIdByWebhookId,
   getTeamIdByUserId,
+  getWorkSpace,
 };

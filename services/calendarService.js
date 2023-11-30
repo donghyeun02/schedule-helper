@@ -90,7 +90,7 @@ const googleOAuth = async (req, res) => {
     res.render('loginSuccessView', { message });
 
     const option = await getCalendarList(slackUserId);
-    const blocks = await afterLoginBlock(option);
+    const blocks = await afterLoginBlock(option, slackUserId);
 
     return await web.views.publish({
       user_id: slackUserId,

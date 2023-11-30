@@ -162,6 +162,22 @@ const deleteWebhook = async (slackUserId) => {
   );
 };
 
+const getChannelAndCalendarNameAndReminder = async (slackUserId) => {
+  const [{ channelName, calendarName, reminderTime }] =
+    await appDataSource.query(
+      `
+    SELECT w.slack_channel_name channelName,
+    w.calendar_name calendarName,
+    u.reminder_time reminderTime
+    FROM webhooks w
+    JOIN users u ON w.slack_user_id = u.slack_user_id
+    WHERE w.slack_user_id = ?`,
+      [slackUserId]
+    );
+
+  return { channelName, calendarName, reminderTime };
+};
+
 module.exports = {
   createUser,
   updateUser,
@@ -176,4 +192,5 @@ module.exports = {
   deleteUser,
   getWebhookIdAndResourceId,
   deleteWebhook,
+  getChannelAndCalendarNameAndReminder,
 };

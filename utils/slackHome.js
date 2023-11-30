@@ -40,7 +40,11 @@ const beforeLoginBlock = async (slackUserId, slackTeamId) => {
   return blocks;
 };
 
-const afterLoginBlock = async (option) => {
+const afterLoginBlock = async (option, slackUserId) => {
+  const userInfo = await calendarDao.getChannelAndCalendarNameAndReminder(
+    slackUserId
+  );
+
   const blocks = [
     {
       type: 'header',
@@ -65,7 +69,7 @@ const afterLoginBlock = async (option) => {
         response_url_enabled: true,
         placeholder: {
           type: 'plain_text',
-          text: '채널 선택', // user가 설정한 채널로 나오도록
+          text: `# ${userInfo.channelName}` || '채널 선택',
         },
       },
     },
@@ -79,7 +83,7 @@ const afterLoginBlock = async (option) => {
         type: 'static_select',
         placeholder: {
           type: 'plain_text',
-          text: '캘린더 목록', // user가 설정한 캘린더가 나오도록
+          text: userInfo.calendarName || '캘린더 선택',
           emoji: true,
         },
         options: option,
@@ -148,7 +152,9 @@ const afterLoginBlock = async (option) => {
       },
       accessory: {
         type: 'timepicker',
-        initial_time: '00:00',
+        initial_time: userInfo.reminderTime
+          ? userInfo.reminderTime.slice(0, 5)
+          : '00:00',
         placeholder: {
           type: 'plain_text',
           text: 'Select time',
@@ -191,7 +197,7 @@ const appHomeOpened = async ({ body, client }) => {
       if (!isDeleted) {
         const option = await getCalendarList(slackUserId);
 
-        const blocks = await afterLoginBlock(option);
+        const blocks = await afterLoginBlock(option, slackUserId);
 
         return await client.views.publish({
           user_id: slackUserId,

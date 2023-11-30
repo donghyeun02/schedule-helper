@@ -134,6 +134,18 @@ const getTeamIdByUserId = async (userId) => {
   return teamId.teamId;
 };
 
+const getWorkSpace = async (teamId) => {
+  const [workSpace] = await appDataSource.query(
+    `
+    SELECT work_space workSpace
+    FROM slacks
+    WHERE team_id = ?`,
+    [teamId]
+  );
+
+  return workSpace.workSpace;
+};
+
 module.exports = {
   updateReminderTime,
   updateSlackChannel,
@@ -147,4 +159,5 @@ module.exports = {
   updateToken,
   getTeamIdByWebhookId,
   getTeamIdByUserId,
+  getWorkSpace,
 };

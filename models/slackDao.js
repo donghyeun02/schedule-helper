@@ -20,13 +20,13 @@ const updateSlackChannel = async (userId, slackChannel, slackChannelName) => {
   );
 };
 
-const updateCalendarId = async (calendar, userId) => {
+const updateCalendarId = async (calendar, calendarName, userId) => {
   return await appDataSource.query(
     `
     UPDATE webhooks
-    SET calendar = ?
+    SET calendar = ?, calendar_name = ?
     WHERE slack_user_id = ?`,
-    [calendar, userId]
+    [calendar, calendarName, userId]
   );
 };
 

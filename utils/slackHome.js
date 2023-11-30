@@ -244,8 +244,8 @@ const selectedCalendar = async ({ ack, body }) => {
   try {
     const userId = body.user.id;
     const calendar = body.actions[0].selected_option.value;
-
-    await slackDao.updateCalendarId(calendar, userId);
+    const calendarName = body.actions[0].selected_option.text.text;
+    await slackDao.updateCalendarId(calendar, calendarName, userId);
   } catch (error) {
     const customError = new Error('캘린더 선택 오류');
     customError.code = 500;

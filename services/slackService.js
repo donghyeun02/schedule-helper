@@ -33,7 +33,7 @@ const handleEvent = async (req, res) => {
   } catch (error) {
     const teamId = body.team_id;
     await sendErrorMessageToServer(teamId, error.stack);
-    return res.status(500);
+    return res.status(500).json({ error: '이벤트 핸들러 에러' });
   }
 };
 
@@ -99,7 +99,7 @@ const handleButton = async (req, res) => {
   } catch (error) {
     const teamId = payload.user.team_id;
     await sendErrorMessageToServer(teamId, error.stack);
-    return res.status(500);
+    return res.status(500).json({ error: '버튼 핸들러 에러' });
   }
 };
 

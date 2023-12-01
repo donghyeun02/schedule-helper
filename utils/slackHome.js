@@ -69,7 +69,7 @@ const afterLoginBlock = async (option, slackUserId) => {
         response_url_enabled: true,
         placeholder: {
           type: 'plain_text',
-          text: `# ${userInfo.channelName}` || '채널 선택',
+          text: `# ${userInfo.channelName}` || `채널 선택`,
         },
       },
     },

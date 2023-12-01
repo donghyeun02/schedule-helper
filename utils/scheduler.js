@@ -36,20 +36,22 @@ const calendarReminder = schedule.scheduleJob('0 * * * *', async () => {
 
     const web = await client(slackTeamId);
 
-    const startOfDay = new Date(currentDate);
-    const endOfDay = new Date(currentDate);
+    const startOfDay = new Date();
+    const endOfDay = new Date();
 
-    startOfDay.setHours(0, 0, 0, 0);
-    endOfDay.setHours(23, 59, 59, 999);
+    startOfDay.setHours(-9, 0, 0, 0);
+    endOfDay.setHours(14, 59, 59, 999);
 
+    console.log(startOfDay, endOfDay);
     const events = await calendar.events
       .list({
         auth: oauth2Client,
         calendarId: calendarId,
-        timeMin: startOfDay,
-        timeMax: endOfDay,
+        timeMin: startOfDay.toISOString(),
+        timeMax: endOfDay.toISOString(),
         singleEvents: true,
         orderBy: 'startTime',
+        timeZone: 'Asia/Seoul',
       })
       .then((res) => {
         return res.data.items;

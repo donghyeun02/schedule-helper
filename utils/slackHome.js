@@ -40,7 +40,11 @@ const beforeLoginBlock = async (slackUserId, slackTeamId) => {
   return blocks;
 };
 
-const afterLoginBlock = async (option) => {
+const afterLoginBlock = async (option, slackUserId) => {
+  const userInfo = await calendarDao.getChannelAndCalendarNameAndReminder(
+    slackUserId
+  );
+
   const blocks = [
     {
       type: 'header',
@@ -65,7 +69,7 @@ const afterLoginBlock = async (option) => {
         response_url_enabled: true,
         placeholder: {
           type: 'plain_text',
-          text: '채널 선택',
+          text: `# ${userInfo.channelName}` || `채널 선택`,
         },
       },
     },
@@ -79,7 +83,7 @@ const afterLoginBlock = async (option) => {
         type: 'static_select',
         placeholder: {
           type: 'plain_text',
-          text: '캘린더 목록',
+          text: userInfo.calendarName || '캘린더 선택',
           emoji: true,
         },
         options: option,
@@ -148,7 +152,9 @@ const afterLoginBlock = async (option) => {
       },
       accessory: {
         type: 'timepicker',
-        initial_time: '00:00',
+        initial_time: userInfo.reminderTime
+          ? userInfo.reminderTime.slice(0, 5)
+          : '00:00',
         placeholder: {
           type: 'plain_text',
           text: 'Select time',
@@ -191,7 +197,7 @@ const appHomeOpened = async ({ body, client }) => {
       if (!isDeleted) {
         const option = await getCalendarList(slackUserId);
 
-        const blocks = await afterLoginBlock(option);
+        const blocks = await afterLoginBlock(option, slackUserId);
 
         return await client.views.publish({
           user_id: slackUserId,
@@ -221,14 +227,18 @@ const appHomeOpened = async ({ body, client }) => {
   }
 };
 
-const selectedChannel = async ({ ack, body }) => {
+const selectedChannel = async ({ ack, body, client }) => {
   ack();
   try {
     const userId = body.user.id;
     const slackChannel = body.actions[0].selected_channel;
+    const slackChannelInfo = await client.conversations.info({
+      channel: slackChannel,
+    });
+    const slackChannelName = slackChannelInfo.channel.name;
 
-    await slackDao.updateSlackChannel(userId, slackChannel);
-  } catch {
+    await slackDao.updateSlackChannel(userId, slackChannel, slackChannelName);
+  } catch (error) {
     const customError = new Error('채널 선택 오류');
     customError.code = 500;
     throw customError;
@@ -240,9 +250,9 @@ const selectedCalendar = async ({ ack, body }) => {
   try {
     const userId = body.user.id;
     const calendar = body.actions[0].selected_option.value;
-
-    await slackDao.updateCalendarId(calendar, userId);
-  } catch {
+    const calendarName = body.actions[0].selected_option.text.text;
+    await slackDao.updateCalendarId(calendar, calendarName, userId);
+  } catch (error) {
     const customError = new Error('캘린더 선택 오류');
     customError.code = 500;
     throw customError;
@@ -497,7 +507,7 @@ const dropWebhook = async ({ ack, body, client }) => {
         },
       });
     }
-  } catch {
+  } catch (error) {
     const customError = new Error('웹훅 삭제 오류');
     customError.code = 500;
     throw customError;
@@ -511,7 +521,7 @@ const registerReminder = async ({ ack, body }) => {
     const time = body.actions[0].selected_time;
 
     await slackDao.updateReminderTime(time, userId);
-  } catch {
+  } catch (error) {
     const customError = new Error('리마인더 시간대 등록 오류');
     customError.code = 500;
     throw customError;
@@ -560,7 +570,7 @@ const googleLogout = async ({ ack, body, client }) => {
         blocks: blocks,
       },
     });
-  } catch {
+  } catch (error) {
     const customError = new Error('구글 로그아웃 오류');
     customError.code = 500;
     throw customError;
@@ -615,7 +625,6 @@ const getCalendarList = async (slackUserId) => {
 
   const calendars = await calendar.calendarList.list({
     auth: oauth2Client,
-    showDeleted: true,
   });
 
   const calendarList = calendars.data.items;

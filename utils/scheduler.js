@@ -42,7 +42,6 @@ const calendarReminder = schedule.scheduleJob('0 * * * *', async () => {
     startOfDay.setHours(-9, 0, 0, 0);
     endOfDay.setHours(14, 59, 59, 999);
 
-    console.log(startOfDay, endOfDay);
     const events = await calendar.events
       .list({
         auth: oauth2Client,

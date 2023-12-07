@@ -607,8 +607,9 @@ const calendarWebhook = async (userId, calendarId) => {
     const { data } = webhook;
 
     const resourceId = data.resourceId;
+    const expiration = data.expiration;
 
-    await calendarDao.updateWebHook(webhookId, resourceId, userId);
+    await calendarDao.updateWebHook(webhookId, resourceId, expiration, userId);
 
     console.log('Google Calendar Webhook이 설정되었습니다. : ', data);
   } catch (error) {

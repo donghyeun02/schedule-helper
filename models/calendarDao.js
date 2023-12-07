@@ -59,13 +59,18 @@ const getCalendarId = async (webhookId) => {
   return calendarId.calendar;
 };
 
-const updateWebHook = async (webhookId, resourceId, slackUserId) => {
+const updateWebHook = async (
+  webhookId,
+  resourceId,
+  expiration,
+  slackUserId
+) => {
   return await appDataSource.query(
     `
     UPDATE webhooks
-    SET webhook_id = ?, resource_id = ?
+    SET webhook_id = ?, resource_id = ?, expiration = ?
     WHERE slack_user_id = ?;`,
-    [webhookId, resourceId, slackUserId]
+    [webhookId, resourceId, expiration, slackUserId]
   );
 };
 
@@ -155,7 +160,7 @@ const deleteWebhook = async (slackUserId) => {
   await appDataSource.query(
     `
     UPDATE webhooks
-    SET resource_id = NULL, webhook_id = NULL
+    SET resource_id = NULL, webhook_id = NULL, expiration = NULL
     WHERE slack_user_id = ?;
     `,
     [slackUserId]

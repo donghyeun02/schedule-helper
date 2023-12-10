@@ -3,7 +3,7 @@ const { calendarService } = require('../services');
 
 const router = express.Router();
 
-router.get('/', calendarService.googleLogin);
+router.get('/login', calendarService.googleLogin);
 router.get('/authcode', calendarService.googleOAuth);
 router.post('/calendar-webhook', calendarService.webhookEventHandler);
 

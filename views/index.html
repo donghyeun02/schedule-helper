@@ -46,6 +46,7 @@
         margin: 0;
         display: flex;
         align-items: center;
+        width: auto;
       }
 
       header h1 span {
@@ -55,6 +56,7 @@
       header nav {
         display: flex;
         align-items: center;
+        margin-top: 0;
       }
 
       nav a {
@@ -233,20 +235,156 @@
         text-align: center;
         padding: 20px 0;
       }
+
+      .menu-bar button {
+        display: none;
+      }
+
+      @media screen and (max-width: 600px) {
+        header {
+          padding: 15px;
+          width: 100%;
+          flex-direction: row;
+          justify-content: space-between;
+          align-items: center;
+        }
+
+        header h1 {
+          font-size: 1.1em;
+          justify-content: flex-end;
+          width: auto;
+        }
+
+        header nav {
+          margin-top: 10px;
+        }
+
+        header img {
+          width: auto;
+          max-height: 55px;
+          margin-right: 10px;
+        }
+
+        nav a {
+          font-size: 1em;
+          margin: 5px;
+        }
+
+        .menu-bar button {
+          font-size: 1.4em;
+          display: block;
+          border: none;
+          background: none;
+        }
+
+        .menu-bar button:hover {
+          opacity: 0.7;
+        }
+
+        .menu-content {
+          display: none;
+          flex-direction: column;
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background-color: #fff;
+          z-index: 999;
+          padding: 20px;
+          align-items: center;
+        }
+
+        .menu-content a {
+          display: block;
+          padding: 10px;
+          text-decoration: none;
+          color: #000;
+          font-size: 1.2em;
+          margin: 10px;
+        }
+
+        .features,
+        .contact {
+          text-align: left;
+          padding: 20px;
+        }
+
+        .features h2,
+        .contact h2 {
+          font-size: 1.8em;
+          margin-bottom: 15px;
+        }
+
+        .features .features,
+        .contact .contact-info {
+          flex-direction: row;
+          width: 100%;
+          overflow: auto;
+        }
+
+        .feature,
+        .info {
+          flex: 0 0 calc(50% - 20px);
+          margin: 10px;
+        }
+
+        .slider {
+          max-width: 100%;
+        }
+
+        .slider img {
+          width: 80%;
+          height: auto;
+        }
+
+        .controls {
+          display: flex;
+        }
+
+        .slack-button {
+          align-items: center;
+          color: #000;
+          background-color: #fff;
+          border: 1px solid #ddd;
+          border-radius: 44px;
+          display: inline-flex;
+          font-family: Lato, sans-serif;
+          font-size: 12px;
+          font-weight: 600;
+          height: 30px;
+          justify-content: center;
+          text-decoration: none;
+          width: 120px;
+          margin-right: 22px;
+        }
+      }
     </style>
   </head>
   <body>
     <header>
       <h1>
-        <img src="Logo.jpg" alt="schedule helper logo" />
         <span><a href="#home-section">스케줄 헬퍼</a></span>
       </h1>
-      <nav>
-        <a href="#home-section">Home</a>
-        <a href="#features-section">Features</a>
-        <a href="#contact-section">Contact</a>
-        <a href="privacy.html">Policy</a>
-      </nav>
+      <div class="menu-bar">
+        <button onclick="toggleMenu()">☰</button>
+        <div class="menu-content">
+          <a href="#home-section" onclick="scrollToSection('home-section')"
+            >Home</a
+          >
+          <a
+            href="#features-section"
+            onclick="scrollToSection('features-section')"
+            >Features</a
+          >
+          <a
+            href="#contact-section"
+            onclick="scrollToSection('contact-section')"
+            >Contact</a
+          >
+          <a href="privacy.html">Policy</a>
+        </div>
+      </div>
       <a
         href="https://slack.com/oauth/v2/authorize?scope=channels%3Ahistory%2Cchannels%3Aread%2Cchat%3Awrite%2Cchat%3Awrite.customize%2Cchat%3Awrite.public%2Cgroups%3Ahistory%2Cim%3Ahistory%2Cmpim%3Ahistory&amp;user_scope=&amp;redirect_uri=https%3A%2F%2Fdonghyeun02.link%2Fslack%2Fredirect&amp;client_id=5093381943072.5854431103427"
         class="slack-button"
@@ -300,11 +438,14 @@
       <div class="features">
         <div class="feature">
           <h3>캘린더 구독</h3>
-          <p>Description of feature 1.</p>
+          <p>
+            캘린더를 구독하여 일정 등록, 변경, 삭제에 대한 알림을 받아 볼 수
+            있습니다 !
+          </p>
         </div>
         <div class="feature">
           <h3>캘린더 리마인더</h3>
-          <p>Description of feature 2.</p>
+          <p>리마인더 시간대에 당일의 일정을 받아 볼 수 있습니다 !</p>
         </div>
       </div>
     </div>
@@ -364,6 +505,7 @@
           top: section.offsetTop,
           behavior: 'smooth',
         });
+        closeMenu();
       }
 
       document
@@ -374,6 +516,7 @@
             top: 0,
             behavior: 'smooth',
           });
+          closeMenu();
         });
 
       document
@@ -389,6 +532,26 @@
           event.preventDefault();
           scrollToSection('contact-section');
         });
+
+      function toggleMenu() {
+        const menuContent = document.querySelector('.menu-content');
+
+        menuContent.style.display =
+          menuContent.style.display === 'none' ? 'block' : 'none';
+      }
+
+      function closeMenu() {
+        const menuContent = document.querySelector('.menu-content');
+        const isMobile = window.innerWidth <= 600;
+
+        if (isMobile) {
+          menuContent.style.display = 'none';
+        }
+      }
+
+      document.addEventListener('DOMContentLoaded', function () {
+        closeMenu();
+      });
     </script>
   </body>
 </html>

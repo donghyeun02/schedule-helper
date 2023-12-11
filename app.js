@@ -3,6 +3,7 @@ require('dotenv').config();
 const express = require('express');
 const logger = require('morgan');
 const cors = require('cors');
+const path = require('path');
 const router = require('./routes');
 
 const { appDataSource } = require('./models/dataSource');
@@ -24,6 +25,10 @@ const port = process.env.PORT;
 
 app.get('/ping', (req, res) => {
   res.json({ message: 'pong' });
+});
+
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'views', 'index.html'));
 });
 
 app.listen(port, async () => {

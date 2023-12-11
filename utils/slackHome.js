@@ -29,7 +29,7 @@ const beforeLoginBlock = async (slackUserId, slackTeamId) => {
             emoji: true,
           },
           value: 'google login',
-          url: `https://donghyeun02.link/?slackUserId=${slackUserId}&slackTeamId=${slackTeamId}`,
+          url: `https://donghyeun02.link/login?slackUserId=${slackUserId}&slackTeamId=${slackTeamId}`,
           style: 'primary',
           action_id: 'google_login',
         },

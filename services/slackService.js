@@ -7,6 +7,7 @@ const {
   reRegisterWebhook,
   dropWebhook,
   registerReminder,
+  resetReminderTime,
   googleLogout,
 } = require('../utils/slackHome');
 const { client } = require('../utils/webClient');
@@ -87,6 +88,13 @@ const handleButton = async (req, res) => {
         registerReminder({
           ack: () => {},
           body: payload,
+        });
+        break;
+      case 'reset_time':
+        resetReminderTime({
+          ack: () => {},
+          body: payload,
+          client: web,
         });
         break;
       case 'google_logout':

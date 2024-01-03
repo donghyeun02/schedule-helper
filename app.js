@@ -27,6 +27,11 @@ app.get('/ping', (req, res) => {
   res.json({ message: 'pong' });
 });
 
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(err.code || 500).json({ error: err.message });
+});
+
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'views', 'index.html'));
 });

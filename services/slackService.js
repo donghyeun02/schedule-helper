@@ -43,8 +43,9 @@ const handleEvent = async (req, res) => {
 
 const handleButton = async (req, res) => {
   const payload = JSON.parse(req.body.payload);
+  const teamId = payload.user.team_id;
+
   try {
-    const teamId = payload.user.team_id;
     const actionId = payload.actions[0].action_id;
 
     const web = await client(teamId);
@@ -108,7 +109,6 @@ const handleButton = async (req, res) => {
 
     return res.sendStatus(200);
   } catch (error) {
-    const teamId = payload.user.team_id;
     await sendErrorMessageToServer(teamId, error.stack);
     return res.status(500).json({ error: '버튼 핸들러 에러' });
   }

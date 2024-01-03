@@ -3,6 +3,7 @@ const { google } = require('googleapis');
 const { slackDao, calendarDao } = require('../models');
 
 const { oauth2Client } = require('../utils/oauth2');
+const { sendErrorMessageToServer } = require('../utils/errorToServer');
 
 const calendar = google.calendar('v3');
 
@@ -239,9 +240,8 @@ const appHomeOpened = async ({ body, client }) => {
       },
     });
   } catch (error) {
-    const customError = new Error('App open 오류');
-    customError.code = 500;
-    throw customError;
+    const teamId = body.user.team_id;
+    await sendErrorMessageToServer(teamId, error.stack);
   }
 };
 
@@ -257,9 +257,8 @@ const selectedChannel = async ({ ack, body, client }) => {
 
     await slackDao.updateSlackChannel(userId, slackChannel, slackChannelName);
   } catch (error) {
-    const customError = new Error('채널 선택 오류');
-    customError.code = 500;
-    throw customError;
+    const teamId = body.user.team_id;
+    await sendErrorMessageToServer(teamId, error.stack);
   }
 };
 
@@ -271,9 +270,8 @@ const selectedCalendar = async ({ ack, body }) => {
     const calendarName = body.actions[0].selected_option.text.text;
     await slackDao.updateCalendarId(calendar, calendarName, userId);
   } catch (error) {
-    const customError = new Error('캘린더 선택 오류');
-    customError.code = 500;
-    throw customError;
+    const teamId = body.user.team_id;
+    await sendErrorMessageToServer(teamId, error.stack);
   }
 };
 
@@ -336,9 +334,8 @@ const registerWebhook = async ({ ack, body, client }) => {
         },
       });
     } catch (error) {
-      const customError = new Error('웹훅이 이미 되어있을 경우 오류');
-      customError.code = 500;
-      throw customError;
+      const teamId = body.user.team_id;
+      await sendErrorMessageToServer(teamId, error.stack);
     }
   } else {
     try {
@@ -366,9 +363,8 @@ const registerWebhook = async ({ ack, body, client }) => {
         },
       });
     } catch (error) {
-      const customError = new Error('웹훅 등록 중 오류');
-      customError.code = 500;
-      throw customError;
+      const teamId = body.user.team_id;
+      await sendErrorMessageToServer(teamId, error.stack);
     }
   }
 };
@@ -445,9 +441,8 @@ const reRegisterWebhook = async ({ ack, body, client }) => {
         },
       });
     } catch (error) {
-      const customError = new Error('웹훅 재등록 오류');
-      customError.code = 500;
-      throw customError;
+      const teamId = body.user.team_id;
+      await sendErrorMessageToServer(teamId, error.stack);
     }
 
     await calendarWebhook(userId, calendarId);
@@ -526,9 +521,8 @@ const dropWebhook = async ({ ack, body, client }) => {
       });
     }
   } catch (error) {
-    const customError = new Error('웹훅 삭제 오류');
-    customError.code = 500;
-    throw customError;
+    const teamId = body.user.team_id;
+    await sendErrorMessageToServer(teamId, error.stack);
   }
 };
 
@@ -539,11 +533,7 @@ const registerReminder = async ({ ack, body }) => {
     const time = body.actions[0].selected_time;
 
     await slackDao.updateReminderTime(time, userId);
-  } catch (error) {
-    const customError = new Error('리마인더 시간대 등록 오류');
-    customError.code = 500;
-    throw customError;
-  }
+  } catch (error) {}
 };
 
 const resetReminderTime = async ({ ack, body, client }) => {
@@ -576,9 +566,8 @@ const resetReminderTime = async ({ ack, body, client }) => {
       },
     });
   } catch (error) {
-    const customError = new Error('리마인더 시간 초기화 오류');
-    customError.code = 500;
-    throw customError;
+    const teamId = body.user.team_id;
+    await sendErrorMessageToServer(teamId, error.stack);
   }
 };
 
@@ -625,9 +614,8 @@ const googleLogout = async ({ ack, body, client }) => {
       },
     });
   } catch (error) {
-    const customError = new Error('구글 로그아웃 오류');
-    customError.code = 500;
-    throw customError;
+    const teamId = body.user.team_id;
+    await sendErrorMessageToServer(teamId, error.stack);
   }
 };
 
@@ -667,9 +655,8 @@ const calendarWebhook = async (userId, calendarId) => {
 
     console.log('Google Calendar Webhook이 설정되었습니다. : ', data);
   } catch (error) {
-    const customError = new Error('웹훅 등록 에러');
-    customError.code = 500;
-    throw customError;
+    const teamId = body.user.team_id;
+    await sendErrorMessageToServer(teamId, error.stack);
   }
 };
 

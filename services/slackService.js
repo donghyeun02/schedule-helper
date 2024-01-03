@@ -109,8 +109,9 @@ const handleButton = async (req, res) => {
 
     return res.sendStatus(200);
   } catch (error) {
-    await sendErrorMessageToServer(teamId, error.stack);
-    return res.status(500).json({ error: '버튼 핸들러 에러' });
+    return res
+      .status(500)
+      .json({ error: '버튼 핸들러 에러', details: error.message });
   }
 };
 

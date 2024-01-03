@@ -164,6 +164,24 @@ const afterLoginBlock = async (option, slackUserId) => {
       },
     },
     {
+      type: 'section',
+      text: {
+        type: 'mrkdwn',
+        text: '설정된 리마인더 시간을 초기화합니다.',
+      },
+      accessory: {
+        type: 'button',
+        text: {
+          type: 'plain_text',
+          text: '시간 초기화',
+          emoji: true,
+        },
+        value: 'webhook',
+        style: 'primary',
+        action_id: 'reset_time',
+      },
+    },
+    {
       type: 'actions',
       elements: [
         {
@@ -528,6 +546,42 @@ const registerReminder = async ({ ack, body }) => {
   }
 };
 
+const resetReminderTime = async ({ ack, body, client }) => {
+  ack();
+
+  try {
+    const userId = body.user.id;
+
+    await calendarDao.resetReminderTime(userId);
+
+    await client.views.open({
+      trigger_id: body.trigger_id,
+      view: {
+        type: 'modal',
+        callback_id: 'success_modal',
+        title: {
+          type: 'plain_text',
+          text: '리마인더 시간 초기화',
+        },
+        blocks: [
+          {
+            type: 'section',
+            block_id: 'error_message',
+            text: {
+              type: 'mrkdwn',
+              text: '리마인더 시간이 초기화되었습니다.',
+            },
+          },
+        ],
+      },
+    });
+  } catch (error) {
+    const customError = new Error('리마인더 시간 초기화 오류');
+    customError.code = 500;
+    throw customError;
+  }
+};
+
 const googleLogout = async ({ ack, body, client }) => {
   ack();
   try {
@@ -670,6 +724,7 @@ module.exports = {
   reRegisterWebhook,
   dropWebhook,
   registerReminder,
+  resetReminderTime,
   googleLogout,
   getCalendarList,
 };

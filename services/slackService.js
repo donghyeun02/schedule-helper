@@ -7,11 +7,15 @@ const {
   reRegisterWebhook,
   dropWebhook,
   registerReminder,
+  resetReminderTime,
   googleLogout,
 } = require('../utils/slackHome');
 const { client } = require('../utils/webClient');
 const { slackDao } = require('../models');
-const { sendErrorMessageToServer } = require('../utils/errorToServer');
+const {
+  sendErrorMessageToServer,
+  sendAppInstallError,
+} = require('../utils/errorToServer');
 
 const webClient = new WebClient();
 
@@ -86,6 +90,13 @@ const handleButton = async (req, res) => {
           body: payload,
         });
         break;
+      case 'reset_time':
+        resetReminderTime({
+          ack: () => {},
+          body: payload,
+          client: web,
+        });
+        break;
       case 'google_logout':
         googleLogout({
           ack: () => {},
@@ -104,19 +115,20 @@ const handleButton = async (req, res) => {
 };
 
 const appInstall = async (req, res) => {
-  const code = req.query.code;
-  const clientId = process.env.SLACK_CLIENT_ID;
-  const clientSecret = process.env.SLACK_CLIENT_SECRET;
-
-  const response = await webClient.oauth.v2.access({
-    client_id: clientId,
-    client_secret: clientSecret,
-    code: code,
-  });
-
-  const { access_token, team } = response;
-  console.log(response);
   try {
+    const code = req.query.code;
+    const clientId = process.env.SLACK_CLIENT_ID;
+    const clientSecret = process.env.SLACK_CLIENT_SECRET;
+
+    const response = await webClient.oauth.v2.access({
+      client_id: clientId,
+      client_secret: clientSecret,
+      code: code,
+    });
+
+    const { access_token, team } = response;
+    console.log(response);
+
     await slackDao.saveSlackUser(
       access_token,
       team.id,
@@ -129,8 +141,7 @@ const appInstall = async (req, res) => {
     const message = '앱이 추가되었습니다.';
     res.render('appInstallView', { message });
   } catch (error) {
-    const teamId = team.id;
-    await sendErrorMessageToServer(teamId, error.stack);
+    await sendAppInstallError(error.stack);
     res.status(500).send('에러 발생');
   }
 };

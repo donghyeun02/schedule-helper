@@ -82,7 +82,7 @@ const calendarReminder = schedule.scheduleJob('0 * * * *', async () => {
         const eventText =
           startDateTime && endDateTime
             ? `일정 : ${startDateTime} - ${endDateTime}`
-            : `종일 : ${startDate}`;
+            : `종일 : ${formatCurrentDate(koreaDate)}`;
 
         return {
           color: '000000',
@@ -117,6 +117,14 @@ const formatCurrentHour = (currentDate) => {
   const formatTime = `${formattedHours}:00:00`;
 
   return formatTime;
+};
+
+const formatCurrentDate = (koreaDate) => {
+  const year = koreaDate.getFullYear();
+  const month = String(koreaDate.getMonth() + 1).padStart(2, '0');
+  const day = String(koreaDate.getDate()).padStart(2, '0');
+
+  return `${year}-${month}-${day}`;
 };
 
 const formatDateTime = (dateTime, tz) => {

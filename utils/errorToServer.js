@@ -7,16 +7,44 @@ const sendErrorMessageToServer = async (teamId, errorMessage) => {
 
   const errorChannel = process.env.ERROR_CHANNEL;
 
+  console.log(errorChannel);
   try {
     const errorWorkSpace = await slackDao.getWorkSpace(teamId);
 
-    const sendErrorMessage = await web.chat.postMessage({
+    const option = {
       channel: errorChannel,
-      text: `*에러 발생*\n워크스페이스: ${errorWorkSpace}\n에러 메시지: ${errorMessage}`,
-      mrkdwn: true,
-    });
+      blocks: [
+        {
+          type: 'header',
+          text: {
+            type: 'plain_text',
+            text: 'Error',
+            emoji: true,
+          },
+        },
+        {
+          type: 'divider',
+        },
+        {
+          type: 'section',
+          text: {
+            type: 'mrkdwn',
+            text: `:office: *Workspace:* ${errorWorkSpace}`,
+          },
+        },
+        {
+          type: 'section',
+          text: {
+            type: 'mrkdwn',
+            text: `:warning: *Error Message:* ${errorMessage}`,
+          },
+        },
+      ],
+    };
 
-    console.log('Slack에 에러 메시지가 전송되었습니다.', sendErrorMessage);
+    await web.chat.postMessage(option);
+
+    console.log('Slack에 에러 메시지가 전송되었습니다.');
   } catch (error) {
     console.error('Slack에 에러 메시지를 전송하는 도중 오류 발생:', error);
   }
@@ -28,12 +56,12 @@ const sendAppInstallError = async (errorMessage) => {
   const errorChannel = process.env.ERROR_CHANNEL;
 
   try {
-    const sendErrorMessage = await web.chat.postMessage({
+    await web.chat.postMessage({
       channel: errorChannel,
       text: `*에러 발생* 앱 설치 과정에서 오류가 떴습니다. \n 에러 메시지 : ${errorMessage}`,
     });
 
-    console.log('Slack에 에러 메시지가 전송되었습니다.', sendErrorMessage);
+    console.log('Slack에 에러 메시지가 전송되었습니다.');
   } catch (error) {
     console.error('Slack에 에러 메시지를 전송하는 도중 오류 발생:', error);
   }

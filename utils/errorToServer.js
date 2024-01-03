@@ -22,4 +22,21 @@ const sendErrorMessageToServer = async (teamId, errorMessage) => {
   }
 };
 
-module.exports = { sendErrorMessageToServer };
+const sendAppInstallError = async (errorMessage) => {
+  const web = new WebClient(process.env.ERROR_CHANNEL);
+
+  const errorChannel = process.env.ERROR_CHANNEL;
+
+  try {
+    const sendErrorMessage = await web.chat.postMessage({
+      channel: errorChannel,
+      text: `*에러 발생* 앱 설치 과정에서 오류가 떴습니다. \n 에러 메시지 : ${errorMessage}`,
+    });
+
+    console.log('Slack에 에러 메시지가 전송되었습니다.', sendErrorMessage);
+  } catch (error) {
+    console.error('Slack에 에러 메시지를 전송하는 도중 오류 발생:', error);
+  }
+};
+
+module.exports = { sendErrorMessageToServer, sendAppInstallError };

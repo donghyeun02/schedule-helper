@@ -533,7 +533,10 @@ const registerReminder = async ({ ack, body }) => {
     const time = body.actions[0].selected_time;
 
     await slackDao.updateReminderTime(time, userId);
-  } catch (error) {}
+  } catch (error) {
+    const teamId = body.user.team_id;
+    await sendErrorMessageToServer(teamId, error.stack);
+  }
 };
 
 const resetReminderTime = async ({ ack, body, client }) => {

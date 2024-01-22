@@ -4,6 +4,7 @@ const { slackDao, calendarDao } = require('../models');
 
 const { oauth2Client } = require('../utils/oauth2');
 const { sendErrorMessageToServer } = require('../utils/errorToServer');
+const { saveEvents } = require('../utils/saveEvents');
 
 const calendar = google.calendar('v3');
 
@@ -340,6 +341,7 @@ const registerWebhook = async ({ ack, body, client }) => {
   } else {
     try {
       await calendarWebhook(userId, calendarId);
+      await saveEvents(userId);
 
       await client.views.open({
         trigger_id: body.trigger_id,
@@ -444,8 +446,8 @@ const reRegisterWebhook = async ({ ack, body, client }) => {
       const teamId = body.user.team_id;
       await sendErrorMessageToServer(teamId, error.stack);
     }
-
     await calendarWebhook(userId, calendarId);
+    await saveEvents(userId);
   }
 };
 

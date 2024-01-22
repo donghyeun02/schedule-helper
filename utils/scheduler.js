@@ -62,7 +62,7 @@ const calendarReminder = schedule.scheduleJob('0 * * * 1-5', async () => {
       const eventOpt = {
         slackChannel: channelId,
         color: '000000',
-        title: '🔔  당일 일정 ',
+        title: '🔔  오늘 일정 ',
         summary: '리마인더 알림',
         text: `당일 일정이 없습니다 !`,
       };
@@ -100,7 +100,7 @@ const calendarReminder = schedule.scheduleJob('0 * * * 1-5', async () => {
 
       const eventOpt = {
         slackChannel: channelId,
-        title: '🔔  당일 일정',
+        title: '🔔  오늘 일정',
         attachments: [...eventAttachments],
       };
 

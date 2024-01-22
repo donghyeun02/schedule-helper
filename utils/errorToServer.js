@@ -12,32 +12,37 @@ const sendErrorMessageToServer = async (teamId, errorMessage) => {
 
     const option = {
       channel: errorChannel,
-      blocks: [
+      attachments: [
         {
-          type: 'header',
+          color: 'DB2525',
           fallback: 'Slack attachment-level `fallback`',
-          text: {
-            type: 'plain_text',
-            text: 'Error',
-            emoji: true,
-          },
-        },
-        {
-          type: 'divider',
-        },
-        {
-          type: 'section',
-          text: {
-            type: 'mrkdwn',
-            text: `:office: *Workspace:* ${errorWorkSpace}`,
-          },
-        },
-        {
-          type: 'section',
-          text: {
-            type: 'mrkdwn',
-            text: `:warning: *Error Message:* ${errorMessage}`,
-          },
+          blocks: [
+            {
+              type: 'header',
+              text: {
+                type: 'plain_text',
+                text: 'Error',
+                emoji: true,
+              },
+            },
+            {
+              type: 'divider',
+            },
+            {
+              type: 'section',
+              text: {
+                type: 'mrkdwn',
+                text: `:office: *Workspace:* ${errorWorkSpace}`,
+              },
+            },
+            {
+              type: 'section',
+              text: {
+                type: 'mrkdwn',
+                text: `:warning: *Error Message:* ${errorMessage}`,
+              },
+            },
+          ],
         },
       ],
     };

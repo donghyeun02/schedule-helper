@@ -7,7 +7,6 @@ const sendErrorMessageToServer = async (teamId, errorMessage) => {
 
   const errorChannel = process.env.ERROR_CHANNEL;
 
-  console.log(errorChannel);
   try {
     const errorWorkSpace = await slackDao.getWorkSpace(teamId);
 
@@ -16,6 +15,7 @@ const sendErrorMessageToServer = async (teamId, errorMessage) => {
       blocks: [
         {
           type: 'header',
+          fallback: 'Slack attachment-level `fallback`',
           text: {
             type: 'plain_text',
             text: 'Error',

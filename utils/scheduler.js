@@ -9,7 +9,7 @@ const { slackService } = require('../services');
 
 const calendar = google.calendar('v3');
 
-const calendarReminder = schedule.scheduleJob('0 * * * *', async () => {
+const calendarReminder = schedule.scheduleJob('0 * * * 1-5', async () => {
   console.log('Calendar Reminder 실행');
 
   const currentDate = new Date();
@@ -76,7 +76,6 @@ const calendarReminder = schedule.scheduleJob('0 * * * *', async () => {
         const endDateTime = event.end.dateTime
           ? formatDateTime(event.end.dateTime, event.end.timeZone)
           : undefined;
-        const startDate = event.start.date || undefined;
         const eventSummary = event.summary || '(제목 없음)';
 
         const eventText =

@@ -7,7 +7,6 @@ const { oauth2Client } = require('../utils/oauth2');
 const { getCalendarList, afterLoginBlock } = require('../utils/slackHome');
 const { client } = require('../utils/webClient');
 const { getRecurrenceEvent } = require('../utils/recurrenceEvent');
-const { sendErrorMessageToServer } = require('../utils/errorToServer');
 
 const calendar = google.calendar('v3');
 
@@ -157,6 +156,7 @@ const webhookEventHandler = async (req, res) => {
           ? `일정 시작 : ${startDateTime}\n일정 종료 : ${endDateTime}`
           : `종일 : ${startDate}`;
 
+      await manageEventInDB(event, webhookId);
       if (!recurrence) {
         switch (eventStatus) {
           case 'confirmed':
@@ -238,6 +238,7 @@ const webhookEventHandler = async (req, res) => {
 
     res.sendStatus(200);
   } catch (error) {
+    console.error('에러 :', error);
     res.status(500).send('에러 발생');
   }
 };
@@ -261,6 +262,51 @@ const getCalendarEvent = async (refreshToken, calendarId) => {
   const event = getEvent.data.items[0];
 
   return event;
+};
+
+// DB에서의 이벤트 관리
+const manageEventInDB = async (event, webhookId) => {
+  const slackUserId = await calendarDao.getUserIdByWebhookId(webhookId);
+
+  const currentDate = await formatDateTime(new Date(), 'Asia/Seoul').split(
+    ' '
+  )[0];
+  const startDate = event.start.dateTime
+    ? await formatDateTime(event.start.dateTime, event.start.timeZone).split(
+        ' '
+      )[0]
+    : undefined;
+
+  if (currentDate === startDate) {
+    const eventStatus = event.status;
+    const createdTime = await getParseTime(event.created);
+    const updatedTime = await getParseTime(event.updated);
+
+    const eventStartTime = event.start.dateTime
+      ? removeTimeZoneOffset(event.start.dateTime)
+      : event.start.date;
+    const eventEndTime = event.end.dateTime
+      ? removeTimeZoneOffset(event.end.dateTime)
+      : event.end.date;
+
+    switch (eventStatus) {
+      case 'confirmed':
+        if (createdTime === updatedTime) {
+          await calendarDao.insertEvent(
+            event,
+            eventStartTime,
+            eventEndTime,
+            slackUserId
+          );
+        } else {
+          // DB에 일정 변경
+        }
+        break;
+      case 'cancelled':
+        // DB에 일정 삭제
+        break;
+    }
+  }
 };
 
 // 받아온 시간(RFC3339) -> Date로 바꾸기
@@ -294,6 +340,10 @@ const formatDateTime = (dateTime, tz) => {
   const formattedResult = `${year}-${month}-${day} (${weekday}) ${hourPart}시 ${minutePart}분`;
 
   return formattedResult;
+};
+
+const removeTimeZoneOffset = (timeWithOffset) => {
+  return timeWithOffset.replace(/\+[\d:]+$/, '');
 };
 
 module.exports = {

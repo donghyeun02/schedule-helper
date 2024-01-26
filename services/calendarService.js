@@ -7,6 +7,7 @@ const { oauth2Client } = require('../utils/oauth2');
 const { getCalendarList, afterLoginBlock } = require('../utils/slackHome');
 const { client } = require('../utils/webClient');
 const { getRecurrenceEvent } = require('../utils/recurrenceEvent');
+const { SlackEventAdapter } = require('@slack/events-api');
 
 const calendar = google.calendar('v3');
 
@@ -266,46 +267,59 @@ const getCalendarEvent = async (refreshToken, calendarId) => {
 
 // DB에서의 이벤트 관리
 const manageEventInDB = async (event, webhookId) => {
-  const slackUserId = await calendarDao.getUserIdByWebhookId(webhookId);
+  try {
+    const slackUserId = await calendarDao.getUserIdByWebhookId(webhookId);
 
-  const currentDate = await formatDateTime(new Date(), 'Asia/Seoul').split(
-    ' '
-  )[0];
-  const startDate = event.start.dateTime
-    ? await formatDateTime(event.start.dateTime, event.start.timeZone).split(
-        ' '
-      )[0]
-    : undefined;
+    const currentDate = await formatDateTime(new Date(), 'Asia/Seoul').split(
+      ' '
+    )[0];
+    const startDate = event.start.dateTime
+      ? await formatDateTime(event.start.dateTime, event.start.timeZone).split(
+          ' '
+        )[0]
+      : undefined;
 
-  if (currentDate === startDate) {
-    const eventStatus = event.status;
-    const createdTime = await getParseTime(event.created);
-    const updatedTime = await getParseTime(event.updated);
+    if (currentDate === startDate) {
+      const eventStatus = event.status;
+      const createdTime = await getParseTime(event.created);
+      const updatedTime = await getParseTime(event.updated);
 
-    const eventStartTime = event.start.dateTime
-      ? removeTimeZoneOffset(event.start.dateTime)
-      : event.start.date;
-    const eventEndTime = event.end.dateTime
-      ? removeTimeZoneOffset(event.end.dateTime)
-      : event.end.date;
+      const summary = event.summary;
+      const htmlLink = event.htmlLink;
+      const eventStartTime = event.start.dateTime
+        ? removeTimeZoneOffset(event.start.dateTime)
+        : event.start.date;
+      const eventEndTime = event.end.dateTime
+        ? removeTimeZoneOffset(event.end.dateTime)
+        : event.end.date;
 
-    switch (eventStatus) {
-      case 'confirmed':
-        if (createdTime === updatedTime) {
-          await calendarDao.insertEvent(
-            event,
-            eventStartTime,
-            eventEndTime,
-            slackUserId
-          );
-        } else {
-          // DB에 일정 변경
-        }
-        break;
-      case 'cancelled':
-        // DB에 일정 삭제
-        break;
+      switch (eventStatus) {
+        case 'confirmed':
+          if (createdTime === updatedTime) {
+            await calendarDao.insertEvent(
+              summary,
+              htmlLink,
+              eventStartTime,
+              eventEndTime,
+              slackUserId
+            );
+          } else {
+            await calendarDao.modifyEvent(
+              summary,
+              htmlLink,
+              eventStartTime,
+              eventEndTime
+            );
+          }
+          break;
+        case 'cancelled':
+          await calendarDao.deleteEvent(htmlLink);
+          break;
+      }
     }
+  } catch (error) {
+    console.error('이벤트 관리 중 에러 : ', error);
+    throw error;
   }
 };
 

@@ -222,31 +222,32 @@ const getUserIdByWebhookId = async (webhookId) => {
 };
 
 const insertEvent = async (
-  event,
+  summary,
+  htmlLink,
   eventStartTime,
   eventEndTime,
   slackUserId
 ) => {
   await appDataSource.query(
     `INSERT INTO events (summary, link, start_time, end_time, slack_user_id) VALUES (?, ?, ?, ?, ?)`,
-    [event.summary, event.htmlLink, eventStartTime, eventEndTime, slackUserId]
+    [summary, htmlLink, eventStartTime, eventEndTime, slackUserId]
   );
 };
 
-const modifyEvent = async (event, eventStartTime, eventEndTime) => {
+const modifyEvent = async (summary, htmlLink, eventStartTime, eventEndTime) => {
   await appDataSource.query(
     `UPDATE events
     SET summary = ?, start_time = ?, end_time = ?
     WHERE link = ?`,
-    [event.summary, eventStartTime, eventEndTime, event.htmlLink]
+    [summary, eventStartTime, eventEndTime, htmlLink]
   );
 };
 
-const deleteEvent = async (event) => {
+const deleteEvent = async (htmlLink) => {
   await appDataSource.query(
     `DELETE FROM events
     WHERE link = ?`,
-    [event.htmlLink]
+    [htmlLink]
   );
 };
 

@@ -7,7 +7,6 @@ const { oauth2Client } = require('../utils/oauth2');
 const { getCalendarList, afterLoginBlock } = require('../utils/slackHome');
 const { client } = require('../utils/webClient');
 const { getRecurrenceEvent } = require('../utils/recurrenceEvent');
-const { SlackEventAdapter } = require('@slack/events-api');
 
 const calendar = google.calendar('v3');
 

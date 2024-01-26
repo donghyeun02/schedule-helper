@@ -1,3 +1,4 @@
+const { eventarc } = require('googleapis/build/src/apis/eventarc');
 const { appDataSource } = require('./dataSource');
 
 const createUser = async (email, refreshToken, slackUserId, slackTeamId) => {
@@ -209,6 +210,47 @@ const saveEvents = async (summary, link, startTime, endTime, slackUserId) => {
   );
 };
 
+const getUserIdByWebhookId = async (webhookId) => {
+  const [slackUserId] = await appDataSource.query(
+    `SELECT slack_user_id slackUserId
+    FROM webhooks
+    WHERE webhook_id = ?`,
+    [webhookId]
+  );
+
+  return slackUserId.slackUserId;
+};
+
+const insertEvent = async (
+  summary,
+  htmlLink,
+  eventStartTime,
+  eventEndTime,
+  slackUserId
+) => {
+  await appDataSource.query(
+    `INSERT INTO events (summary, link, start_time, end_time, slack_user_id) VALUES (?, ?, ?, ?, ?)`,
+    [summary, htmlLink, eventStartTime, eventEndTime, slackUserId]
+  );
+};
+
+const modifyEvent = async (summary, htmlLink, eventStartTime, eventEndTime) => {
+  await appDataSource.query(
+    `UPDATE events
+    SET summary = ?, start_time = ?, end_time = ?
+    WHERE link = ?`,
+    [summary, eventStartTime, eventEndTime, htmlLink]
+  );
+};
+
+const deleteEvent = async (htmlLink) => {
+  await appDataSource.query(
+    `DELETE FROM events
+    WHERE link = ?`,
+    [htmlLink]
+  );
+};
+
 module.exports = {
   createUser,
   updateUser,
@@ -226,4 +268,8 @@ module.exports = {
   getChannelAndCalendarNameAndReminder,
   resetReminderTime,
   saveEvents,
+  getUserIdByWebhookId,
+  insertEvent,
+  modifyEvent,
+  deleteEvent,
 };

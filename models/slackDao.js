@@ -69,13 +69,13 @@ const getResourceIdByuserId = async (userId) => {
 const getSlackChannel = async (webhookId) => {
   const [slackChannel] = await appDataSource.query(
     `
-    SELECT slack_channel slackChannel
+    SELECT slack_channel channelId
     FROM webhooks
     WHERE webhook_id = ?`,
     [webhookId]
   );
 
-  return slackChannel.slackChannel;
+  return slackChannel.channelId;
 };
 
 const saveSlackUser = async (token, teamId, workSpace, userId) => {

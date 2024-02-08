@@ -251,6 +251,18 @@ const deleteEvent = async (htmlLink) => {
   );
 };
 
+const checkExpiredWebhook = async (currentTime) => {
+  const expiredWebhooks = await appDataSource.query(
+    `SELECT slack_user_id slackUserId 
+    FROM webhooks
+    WHERE expiration < ?;
+    `,
+    [currentTime]
+  );
+
+  return expiredWebhooks;
+};
+
 module.exports = {
   createUser,
   updateUser,
@@ -272,4 +284,5 @@ module.exports = {
   insertEvent,
   modifyEvent,
   deleteEvent,
+  checkExpiredWebhook,
 };

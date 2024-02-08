@@ -8,6 +8,9 @@ const router = require('./routes');
 
 const { appDataSource } = require('./models/dataSource');
 const { calendarReminder } = require('./utils/scheduler');
+const {
+  reRegisterExpiredWebhooks,
+} = require('./utils/reRegisterExpiredWebhook');
 
 const app = express();
 
@@ -49,3 +52,4 @@ app.listen(port, async () => {
 });
 
 calendarReminder;
+reRegisterExpiredWebhooks;

@@ -1,6 +1,7 @@
 const schedule = require('node-schedule');
 const { v4 } = require('uuid');
 const { google } = require('googleapis');
+const { WebClient } = require('@slack/web-api');
 
 const { oauth2Client } = require('./oauth2');
 const { slackDao, calendarDao } = require('../models');
@@ -28,21 +29,6 @@ const reRegisterExpiredWebhooks = schedule.scheduleJob(
 
         const getAccessToken = await oauth2Client.getAccessToken();
         const accessToken = getAccessToken.token;
-
-        const webhookData = await calendarDao.getWebhookIdAndResourceId(
-          slackUserId
-        );
-
-        await calendar.channels.stop({
-          resource: {
-            id: webhookData.webhookId,
-            resourceId: webhookData.resourceId,
-          },
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            Accept: `application/json`,
-          },
-        });
 
         const webhook = await calendar.events.watch({
           resource: {
@@ -105,7 +91,7 @@ const reRegisterExpiredWebhooks = schedule.scheduleJob(
                 type: 'section',
                 text: {
                   type: 'mrkdwn',
-                  text: `:warning: *Error Message:* ${errorMessage}`,
+                  text: `:warning: *Error Message:* ${err}`,
                 },
               },
             ],

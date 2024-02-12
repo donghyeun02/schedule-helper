@@ -8,7 +8,7 @@ const { slackDao, calendarDao } = require('../models');
 const calendar = google.calendar('v3');
 
 const reRegisterExpiredWebhooks = schedule.scheduleJob(
-  '0 0 0 * *',
+  '0 0 * * *',
   async () => {
     try {
       const currentTime = Date.now();

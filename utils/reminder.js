@@ -1,6 +1,6 @@
 const schedule = require('node-schedule');
 const { google } = require('googleapis');
-const { client } = require('../utils/webClient');
+const { client } = require('./webClient');
 
 const { oauth2Client } = require('./oauth2');
 const { slackDao, calendarDao } = require('../models');

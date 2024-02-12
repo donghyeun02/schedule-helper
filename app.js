@@ -7,7 +7,7 @@ const path = require('path');
 const router = require('./routes');
 
 const { appDataSource } = require('./models/dataSource');
-const { calendarReminder } = require('./utils/scheduler');
+const { calendarReminder } = require('./utils/reminder');
 const {
   reRegisterExpiredWebhooks,
 } = require('./utils/reRegisterExpiredWebhook');
